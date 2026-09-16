@@ -1,0 +1,23 @@
+[
+  {
+    "name": "yc-ai-playbook.md",
+    "url": "https://gist.githubusercontent.com/amiorin/e87a69b752a627c12f1a10b4483e0f6d/raw/7334c526f4381f40f5477c87c76b03b254938b19/yc-ai-playbook.md",
+    "sha256": "554c411d9bfd12775ead6e4e50fbecd170148ffe9675c837b96b594a55d8769b",
+    "bytes": 10581,
+    "role": "User-supplied secondary essay; read in full, not treated as a formal specification"
+  },
+  {
+    "name": "context-warehouse.md",
+    "url": "https://gist.githubusercontent.com/amiorin/2b112bdcc763d26871d77ff7165ce3fa/raw/6173373082adec618d0a14520276b2ec91f3f521/context-warehouse.md",
+    "sha256": "05ba563ba889c7baa5ad8594285ecb732d5d60cb496666c65f7186234feba1ca",
+    "bytes": 5540,
+    "role": "User-supplied secondary essay; read in full, not treated as a formal specification"
+  },
+  {
+    "name": "context-in-a-db.md",
+    "url": "https://gist.githubusercontent.com/amiorin/22ba97453a3503b74b25a004f38ca5fa/raw/1010f97b122677d29150d8a204064d7c92df0a44/context-in-a-db.md",
+    "sha256": "9c7206e078fb3f7573617a91bbb313f5a81689151ca21d7442e262c83fba7a2b",
+    "bytes": 8033,
+    "role": "User-supplied secondary essay; read in full, not treated as a formal specification"
+  }
+]
