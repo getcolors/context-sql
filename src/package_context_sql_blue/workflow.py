@@ -95,11 +95,15 @@ def build_step(opts):
 
 def skill_payload(opts):
     source = ROOT / 'skills/sql-context'
-    return {
-        'SKILL.md': (source / 'SKILL.md').read_bytes(),
-        'scripts/context.py': (source / 'scripts/context.py').read_bytes(),
-        'connection-path': (str(Path(opts['context-sql-config']).expanduser().absolute()) + '\n').encode(),
-    }
+    payload = {}
+    for path in sorted(source.rglob('*')):
+        if path.is_symlink():
+            raise ValueError('Skill payload must not contain symlinks')
+        if path.is_file() and '__pycache__' not in path.parts and path.suffix != '.pyc':
+            payload[path.relative_to(source).as_posix()] = path.read_bytes()
+    payload['connection-path'] = (
+        str(Path(opts['context-sql-config']).expanduser().absolute()) + '\n').encode()
+    return payload
 
 
 def check_skill_target(opts):
@@ -125,7 +129,9 @@ def check_skill_target(opts):
                 raise ValueError(f'Installed skill has unmanaged changes: {name}')
     # Do not claim an unrelated skill directory just because its filenames differ.
     if target.exists() and not manifest.exists():
-        known = {'SKILL.md', 'scripts', 'scripts/context.py', 'scripts/__pycache__', 'connection-path'}
+        known = set(expected) | {'scripts/__pycache__'}
+        for name in expected:
+            known.update(str(p) for p in Path(name).parents if str(p) != '.')
         for item in target.rglob('*'):
             name = item.relative_to(target).as_posix()
             if name not in known and not name.startswith('scripts/__pycache__/'):

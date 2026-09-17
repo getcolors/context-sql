@@ -14,6 +14,7 @@ The supplied essays describe this approach but do not define a formal protocol. 
 | [sql/004_context_runtime.sql](sql/004_context_runtime.sql) | Original project-path and task keys for working memory |
 | [sql/005_portable_projects.sql](sql/005_portable_projects.sql) | Portable project IDs, separate local paths, and preserved legacy task identities |
 | [sql/006_ingestion.sql](sql/006_ingestion.sql) | Multi-repository acquisition, source resolution, and recoverable lock snapshots |
+| [sql/007_remote.sql](sql/007_remote.sql) | Account identities, shared memory revisions, and private prompt/query traces |
 | [skills/ingest-context-skills/SKILL.md](skills/ingest-context-skills/SKILL.md) | Verified ingestion and shared catalog locks |
 | [skills/sql-context/SKILL.md](skills/sql-context/SKILL.md) | Agent workflow and its bounded SQL runner |
 | [skills/package-context-sql-blue/SKILL.md](skills/package-context-sql-blue/SKILL.md) | Package Skill to create and initialize PostgreSQL on a new local machine |
@@ -28,6 +29,12 @@ The supplied essays describe this approach but do not define a formal protocol. 
 The snapshot contains **14 skills, 80 files, 755 sections, 179 pin rows, and 110 eval cases**, from `getcolors/skills` commit `3c82f5c9fc1400f748988e8295ab3af7cf5994d5`. Thirteen skills are Context Skills. `refresh-oci-token` is a generic skill. The importer stores its script as source material and never executes it.
 
 The original files remain authoritative in `getcolors/skills`. This repository's data is a generated database snapshot, not another maintained implementation of their companion packages. Verification claims are source-reported. Importing the files does not repeat the builds described by those claims.
+
+## Remote accounts and SQL over HTTPS
+
+The optional HTTPS service lets authenticated accounts submit SQL, publish or consume memories according to visibility, and record prompts with their connected queries. Each account has distinct PostgreSQL reader and writer identities. A trace ID correlates operations; a bearer credential authenticates them.
+
+The `sql-context` skill includes a remote client and SQL references. Traces support a review workflow for improving retrieval queries and proposing data-model changes. See [remote setup, ownership, and tracing](docs/remote-service.md) for deployment and its current limits. Existing local task notes remain separate and private to their local database login.
 
 ## Create on a new machine with the Package Skill
 
@@ -213,6 +220,7 @@ psql -X -v ON_ERROR_STOP=1 -d context_sql -f sql/003_acquisition.sql
 psql -X -v ON_ERROR_STOP=1 -d context_sql -f sql/004_context_runtime.sql
 psql -X -v ON_ERROR_STOP=1 -d context_sql -f sql/005_portable_projects.sql
 psql -X -v ON_ERROR_STOP=1 -d context_sql -f sql/006_ingestion.sql
+psql -X -v ON_ERROR_STOP=1 -d context_sql -f sql/007_remote.sql
 psql -X -v ON_ERROR_STOP=1 -d context_sql -f data/skills.sql
 psql -X -v ON_ERROR_STOP=1 -d context_sql \
   -v symptom='NOAUTH' \

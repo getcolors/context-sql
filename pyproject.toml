@@ -7,11 +7,16 @@ dependencies = [
   "blue @ git+https://github.com/getcolors/blue.git@290f313ead5ca162875c33a049c880da017eae09",
   "PyYAML>=6.0,<7",
   "psycopg[binary]==3.2.10",
+  "pglast==7.18",
+  "fastapi==0.141.1",
+  "uvicorn==0.53.0",
 ]
 
 [project.scripts]
 context-sql-blue = "package_context_sql_blue.cli:main"
 context-skills = "package_context_sql_blue.ingest:main"
+context-sql-service = "package_context_sql_blue.remote_service:main"
+context-sql-admin = "package_context_sql_blue.remote_admin:main"
 
 [tool.uv.sources]
 blue = { git = "https://github.com/getcolors/blue.git", rev = "290f313ead5ca162875c33a049c880da017eae09" }
@@ -19,6 +24,11 @@ blue = { git = "https://github.com/getcolors/blue.git", rev = "290f313ead5ca1628
 [build-system]
 requires = ["hatchling>=1.27,<2"]
 build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28,<1",
+]
 
 [tool.hatch.metadata]
 allow-direct-references = true
@@ -29,6 +39,5 @@ packages = ["src/package_context_sql_blue"]
 [tool.hatch.build.targets.wheel.force-include]
 "sql" = "package_context_sql_blue/resources/sql"
 "data/skills.sql" = "package_context_sql_blue/resources/data/skills.sql"
-"skills/sql-context/SKILL.md" = "package_context_sql_blue/resources/skills/sql-context/SKILL.md"
-"skills/sql-context/scripts/context.py" = "package_context_sql_blue/resources/skills/sql-context/scripts/context.py"
+"skills/sql-context" = "package_context_sql_blue/resources/skills/sql-context"
 "scripts/import_skills.py" = "package_context_sql_blue/snapshot.py"

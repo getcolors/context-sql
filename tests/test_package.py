@@ -200,6 +200,10 @@ class PackageTests(unittest.IsolatedAsyncioTestCase):
             self.assertFalse(runner.is_symlink())
             self.assertEqual(runner.read_bytes(),
                              (ROOT / 'skills/sql-context/scripts/context.py').read_bytes())
+            for relative in ('scripts/remote.py', 'references/queries.sql',
+                             'references/schema.md', 'references/improvement.md'):
+                self.assertEqual((self.skill / relative).read_bytes(),
+                                 (ROOT / 'skills/sql-context' / relative).read_bytes())
             self.assertEqual((self.skill / 'connection-path').read_text().strip(),
                              str(self.connections))
             spec = importlib.util.spec_from_file_location('installed_package_context', runner)
