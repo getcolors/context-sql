@@ -28,14 +28,21 @@ def main():
     dependency = f"blue @ git+https://github.com/getcolors/blue.git@{blue_revision}"
     if dependency not in config["project"]["dependencies"]:
         raise SystemExit("Blue dependency and tool.uv.sources revisions disagree")
-    launcher = root / "skills/package-context-sql-blue/blue"
-    content = launcher.read_text()
-    for key, value in (("package_revision", revision), ("blue_revision", blue_revision)):
-        content, count = re.subn(rf"^{key}='[^']*'$", f"{key}='{value}'", content, flags=re.MULTILINE)
-        if count != 1:
-            raise SystemExit(f"Expected one {key} assignment in launcher")
-    launcher.write_text(content)
-    launcher.chmod(0o755)
+    launchers = (
+        root / "skills/package-context-sql-blue/blue",
+        root / "skills/ingest-context-skills/context-skills",
+    )
+    stamped = []
+    for launcher in launchers:
+        content = launcher.read_text()
+        for key, value in (("package_revision", revision), ("blue_revision", blue_revision)):
+            content, count = re.subn(rf"^{key}='[^']*'$", f"{key}='{value}'", content, flags=re.MULTILINE)
+            if count != 1:
+                raise SystemExit(f"Expected one {key} assignment in {launcher.relative_to(root)}")
+        stamped.append((launcher, content))
+    for launcher, content in stamped:
+        launcher.write_text(content)
+        launcher.chmod(0o755)
     print(revision)
 
 

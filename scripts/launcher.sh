@@ -16,3 +16,12 @@ if [[ "${CONTEXT_SQL_CHECK_PIN:-1}" == 1 ]]; then
   (cd "$tmp" && env -u CONTEXT_SQL_LIB_ROOT ./blue --help) >"$tmp/pinned-help"
   rg -q 'create' "$tmp/pinned-help"
 fi
+
+cp "$root/skills/ingest-context-skills/context-skills" "$tmp/context-skills"
+chmod +x "$tmp/context-skills"
+(cd "$tmp" && CONTEXT_SQL_LIB_ROOT="$root" ./context-skills --help) >"$tmp/ingest-help"
+rg -q 'ingest' "$tmp/ingest-help"
+if [[ "${CONTEXT_SQL_CHECK_PIN:-1}" == 1 ]]; then
+  (cd "$tmp" && env -u CONTEXT_SQL_LIB_ROOT ./context-skills --help) >"$tmp/pinned-ingest-help"
+  rg -q 'ingest' "$tmp/pinned-ingest-help"
+fi

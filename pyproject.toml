@@ -6,10 +6,12 @@ requires-python = ">=3.11"
 dependencies = [
   "blue @ git+https://github.com/getcolors/blue.git@290f313ead5ca162875c33a049c880da017eae09",
   "PyYAML>=6.0,<7",
+  "psycopg[binary]==3.2.10",
 ]
 
 [project.scripts]
 context-sql-blue = "package_context_sql_blue.cli:main"
+context-skills = "package_context_sql_blue.ingest:main"
 
 [tool.uv.sources]
 blue = { git = "https://github.com/getcolors/blue.git", rev = "290f313ead5ca162875c33a049c880da017eae09" }
@@ -29,3 +31,4 @@ packages = ["src/package_context_sql_blue"]
 "data/skills.sql" = "package_context_sql_blue/resources/data/skills.sql"
 "skills/sql-context/SKILL.md" = "package_context_sql_blue/resources/skills/sql-context/SKILL.md"
 "skills/sql-context/scripts/context.py" = "package_context_sql_blue/resources/skills/sql-context/scripts/context.py"
+"scripts/import_skills.py" = "package_context_sql_blue/snapshot.py"

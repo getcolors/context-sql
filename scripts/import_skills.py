@@ -101,8 +101,9 @@ def pin_rows(section):
     return result
 
 
-def source_inventory(repo, commit):
+def source_inventory(repo, commit, directories=None):
     """Read the authoritative inventory without checking out or executing source files."""
+    directories = directories if directories is not None else {slug: slug for slug in SKILLS}
     inventory = {}
     entries = {}
     for entry in git(repo, 'ls-tree', '-r', '-z', commit).split(b'\0'):
@@ -117,7 +118,8 @@ def source_inventory(repo, commit):
         mode, kind, object_id = metadata.decode('ascii').split()
         entries[path] = (mode, kind, object_id)
     for path, (mode, kind, object_id) in entries.items():
-        selected = path.split('/', 1)[0] in SKILLS
+        selected = any(path.startswith(directory + '/') or directory == '.'
+                       for directory in directories.values())
         # Discovery may read unselected metadata. Permit only direct links to
         # regular tracked files inside the repository, such as CLAUDE.md -> AGENTS.md.
         if mode == '120000' and not selected:
@@ -134,8 +136,12 @@ def source_inventory(repo, commit):
         # The installer discovers unselected skills too, so validate the whole tree.
         if not selected:
             continue
-        inventory[path] = dict(raw=git(repo, 'cat-file', 'blob', object_id), mode=mode)
-    for slug in SKILLS:
+        for slug, directory in directories.items():
+            prefix = '' if directory == '.' else directory + '/'
+            if path.startswith(prefix):
+                inventory[slug + '/' + path[len(prefix):]] = dict(
+                    raw=git(repo, 'cat-file', 'blob', object_id), mode=mode)
+    for slug in directories:
         if f'{slug}/SKILL.md' not in inventory:
             raise ValueError(f'Missing required skill {slug}')
     return inventory
@@ -164,24 +170,26 @@ def verify_payload(payload_root, inventory):
     payload = {}
     for path in sorted(inventory):
         raw = installed[path]
+        if bool((payload_root / path).stat().st_mode & 0o111) != (inventory[path]['mode'] == '100755'):
+            raise ValueError(f'Installed mode differs from upstream: {path}')
         if raw != inventory[path]['raw']:
             raise ValueError(f'Installed content differs from upstream: {path}')
         payload[path] = dict(raw=raw, mode=inventory[path]['mode'])
     return payload
 
 
-def install_command(source, commit):
-    return ['npx', '--yes', f'skills@{SKILLS_CLI_VERSION}', 'add',
-            f'{source}/tree/{commit}', '--skill', *SKILLS,
+def install_command(source, commit, skills=None, cli_version=SKILLS_CLI_VERSION):
+    return ['npx', '--yes', f'skills@{cli_version}', 'add',
+            f'{source}/tree/{commit}', '--skill', *(SKILLS if skills is None else skills),
             '--agent', 'codex', '--copy', '--yes']
 
 
-def acquisition_record(payload, source, commit):
+def acquisition_record(payload, source, commit, skills=None, cli_version=SKILLS_CLI_VERSION):
     manifest = [dict(path=path, mode=file['mode'], sha256=hashlib.sha256(file['raw']).hexdigest())
                 for path, file in sorted(payload.items())]
     acquisition = dict(repository_url=source, git_commit=commit,
-                       skills_cli_version=SKILLS_CLI_VERSION,
-                       command=install_command(source, commit),
+                       skills_cli_version=cli_version,
+                       command=install_command(source, commit, skills, cli_version),
                        acquired_at=datetime.now(timezone.utc).isoformat(),
                        manifest_sha256=hashlib.sha256(json.dumps(manifest, sort_keys=True).encode()).hexdigest(),
                        verification_method='git-tree-and-byte-comparison-v1')
@@ -211,10 +219,10 @@ def frontmatter(text, slug):
     return metadata
 
 
-def build_bundle(payload, commit, acquisition):
+def build_bundle(payload, commit, acquisition, source=SOURCE_URL, directories=None):
     bundle = dict(format_version=2, importer_version=IMPORTER_VERSION,
-                  repository_url=SOURCE_URL, git_commit=commit, acquisition=acquisition, skills=[])
-    for slug in SKILLS:
+                  repository_url=source, git_commit=commit, acquisition=acquisition, skills=[])
+    for slug in (SKILLS if directories is None else sorted(directories)):
         files = []
         for full_path in sorted(p for p in payload if p.startswith(slug+'/')):
             raw = payload[full_path]['raw']
@@ -245,6 +253,9 @@ def build_bundle(payload, commit, acquisition):
                       '\n'.join(f["path"]+':'+f['git_mode']+':'+f['sha256'] for f in files)).encode()).hexdigest()
         bundle['skills'].append(dict(slug=slug,kind='generic' if slug=='refresh-oci-token' else 'context',
                                      version_id=version_id,routing_description=metadata['description'],files=files))
+    if directories is not None:
+        for skill in bundle['skills']:
+            skill['source_directory'] = directories[skill['slug']]
     return bundle
 
 
@@ -296,8 +307,8 @@ def sql(bundle):
         key=dict(skill_slug=slug,version_id=version)
         insert('catalog.skill',dict(slug=slug,kind=skill['kind']))
         insert('catalog.skill_version',dict(**key,repository_url=bundle['repository_url'],
-               git_commit=bundle['git_commit'],source_directory=slug,
-               routing_description=skill['routing_description'],importer_version=IMPORTER_VERSION))
+               git_commit=bundle['git_commit'],source_directory=skill.get('source_directory', slug),
+               routing_description=skill['routing_description'],importer_version=bundle['importer_version']))
         insert('catalog.skill_acquisition', dict(acquisition_id=acquisition['acquisition_id'], **key))
         for file in skill['files']:
             fkey=dict(**key,path=file['path'])

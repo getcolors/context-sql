@@ -1,0 +1,492 @@
+{
+  "format": 1,
+  "imports": [
+    {
+      "acquisitionCliVersion": "1.6.0",
+      "commit": "3c82f5c9fc1400f748988e8295ab3af7cf5994d5",
+      "manifest": [
+        {
+          "mode": "100644",
+          "path": "agent-network-doks/SKILL.md",
+          "sha256": "eb8266e8d2911263a2b8308dff23c089085759e14efcb97e1edbc38b33b489a6"
+        },
+        {
+          "mode": "100644",
+          "path": "agent-network-doks/evals/evals.json",
+          "sha256": "c862de86af281571d01192f380a7e596f01f0f481cf8db8f59756b89fd7b302f"
+        },
+        {
+          "mode": "100644",
+          "path": "agent-network-doks/references/acceptance.md",
+          "sha256": "5625042cd9eece6b430fa403ab1ec7557b0240f1fc2e74c6fd45a10eaa2d16e6"
+        },
+        {
+          "mode": "100644",
+          "path": "agent-network-doks/references/failure-catalogue.md",
+          "sha256": "002083557decd902cfcc12c3a7a201d31b543e80e313620cbfb584c1bd99ecd8"
+        },
+        {
+          "mode": "100644",
+          "path": "agent-network-doks/references/pins.md",
+          "sha256": "93cc3f0f63c4d8417e62bb2f3b93c7c8681df84fdcc9dea3ae80c2d61b9bbbc8"
+        },
+        {
+          "mode": "100644",
+          "path": "agent-network-kubernetes/SKILL.md",
+          "sha256": "41f9e7f705ad0d133af5313f6417d0ae1719b78c2f951a6171eec21919be6ac0"
+        },
+        {
+          "mode": "100644",
+          "path": "agent-network-kubernetes/evals/evals.json",
+          "sha256": "24e0def260d2b2e13af489b9bc56fa142973bc6f6178957e8f3e6178ce5bbbf8"
+        },
+        {
+          "mode": "100644",
+          "path": "agent-network-kubernetes/references/acceptance.md",
+          "sha256": "19aeca5151f6916baba0d9cac9259f0ff4465fa489263426e2aa3700f36c25f6"
+        },
+        {
+          "mode": "100644",
+          "path": "agent-network-kubernetes/references/failure-catalogue.md",
+          "sha256": "59af97e1546810763ddcdbe75e10d38e1c5d4ada7296a5d3abff52e48b3f7615"
+        },
+        {
+          "mode": "100644",
+          "path": "agent-network-kubernetes/references/netstack.md",
+          "sha256": "0fd2fb78f65a16ea29009feafb413136399c7c1f7e678aeb7706c75e92c1eaa3"
+        },
+        {
+          "mode": "100644",
+          "path": "agent-network-kubernetes/references/pins.md",
+          "sha256": "6795b6dc401b1f9fe75b5e003d79a9308556542ddabee6eac065ae97c9e8fedb"
+        },
+        {
+          "mode": "100644",
+          "path": "agent-network-single-node/SKILL.md",
+          "sha256": "8d02bfcf023be383628da6ff08c1d7dd912b20f44b1b95ad8057651c27ac2f70"
+        },
+        {
+          "mode": "100644",
+          "path": "agent-network-single-node/evals/evals.json",
+          "sha256": "76d3b348fbc923a1cd914ff811ff4553d99e1209d725f1d4bb4839396bf4b4df"
+        },
+        {
+          "mode": "100644",
+          "path": "agent-network-single-node/references/acceptance.md",
+          "sha256": "4e3da8cb24045fe55bb30adeddb42679f7dec057c5e8bcb06aea6e14856aff58"
+        },
+        {
+          "mode": "100644",
+          "path": "agent-network-single-node/references/api.md",
+          "sha256": "930bfbbd655312cf30c3adefa57cad2b632d9f894262a7aedecd0c1b79876dfe"
+        },
+        {
+          "mode": "100644",
+          "path": "agent-network-single-node/references/failure-catalogue.md",
+          "sha256": "636cf722b8ef884f02540b8ca54fda753721c13cd56cc0348b3060f63c1874e4"
+        },
+        {
+          "mode": "100644",
+          "path": "agent-network-single-node/references/pins.md",
+          "sha256": "0d95bb160e155ddc0604c9bf6a97271aed49fa9f24eca1fd01e5ef2aff05341e"
+        },
+        {
+          "mode": "100644",
+          "path": "automq-multi-node/SKILL.md",
+          "sha256": "44bb7072131e8fe717d9507f4002451fd91bb2e8a16433b2fd91051758bcb6ac"
+        },
+        {
+          "mode": "100644",
+          "path": "automq-multi-node/evals/evals.json",
+          "sha256": "57cf0e732616862b37f2ecbd6fae6ff8f9acf14aec74ec86c6808b917397467e"
+        },
+        {
+          "mode": "100644",
+          "path": "automq-multi-node/references/acceptance.md",
+          "sha256": "8d46b6b9922d134e18e478fa483cb9b818e92551a239cef5736c3277610dc531"
+        },
+        {
+          "mode": "100644",
+          "path": "automq-multi-node/references/aws.md",
+          "sha256": "8362d4cd54961cfe91c52c7e63f1226b55bae8ea10b5b984f4602b5e498b52ad"
+        },
+        {
+          "mode": "100644",
+          "path": "automq-multi-node/references/contract.md",
+          "sha256": "542a9468dda07f2edabfee975ebc274afcd0f9f06fd87ee35f391eff3f9b25a5"
+        },
+        {
+          "mode": "100644",
+          "path": "automq-multi-node/references/failure-catalogue.md",
+          "sha256": "b3a94917f4cdb0496ee1454286ccb242638a0fbf331275e5b57fb6970e5b9788"
+        },
+        {
+          "mode": "100644",
+          "path": "automq-multi-node/references/gcloud.md",
+          "sha256": "331524d6f612a5a8b21e7c20be9db7eac8a69f5caf5e09fd17da3db7ea715b64"
+        },
+        {
+          "mode": "100644",
+          "path": "automq-multi-node/references/oci-2026-09-12.md",
+          "sha256": "c9580d124cb0a5fc3197eb28707ea29121a11fdbade6690250b990094e62fac5"
+        },
+        {
+          "mode": "100644",
+          "path": "automq-multi-node/references/oci.md",
+          "sha256": "cb5aa085589500507a734a218dc2d7532154fac5693aee04bf1a42dab6970703"
+        },
+        {
+          "mode": "100644",
+          "path": "automq-multi-node/references/pins.md",
+          "sha256": "5779d6fa5368cc86b123850960a756c2848acebccb30835f9c6910267c3c3edc"
+        },
+        {
+          "mode": "100644",
+          "path": "clickhouse-replicated/SKILL.md",
+          "sha256": "16e87011106e9c5b1870fc7e13f7212ae1be52c2e76e3fb67b7d8c9a48d31b30"
+        },
+        {
+          "mode": "100644",
+          "path": "clickhouse-replicated/evals/evals.json",
+          "sha256": "cfba5179d9f95a3cd9ad05b58126fbb1601a5e5f77d908501fbbb491a2b0557f"
+        },
+        {
+          "mode": "100644",
+          "path": "clickhouse-replicated/references/acceptance.md",
+          "sha256": "3b2c34d87a72bab1e7b3b405fd41a707122b531d28fd8d85409c99edf2db88f7"
+        },
+        {
+          "mode": "100644",
+          "path": "clickhouse-replicated/references/aws.md",
+          "sha256": "cc552eb564970da194ea4c396dbe0782812bbea4a8d6e1cc9e68b6c1edc24e8a"
+        },
+        {
+          "mode": "100644",
+          "path": "clickhouse-replicated/references/failure-catalogue.md",
+          "sha256": "a7f1325413c9d2d0426bc96cce58c7eeb6c372df6d55532f38f74e6d46d7f763"
+        },
+        {
+          "mode": "100644",
+          "path": "clickhouse-replicated/references/pins.md",
+          "sha256": "2c14291ec0960df47d3c3fc7827c046e3344ad46d6fd25120fae4eb6c52a538f"
+        },
+        {
+          "mode": "100644",
+          "path": "langfuse-multi-node/SKILL.md",
+          "sha256": "eeac4c6e4bcf0d54194f4c597fcba93424f3e2e597f48ef65f50a10321153c89"
+        },
+        {
+          "mode": "100644",
+          "path": "langfuse-multi-node/evals/evals.json",
+          "sha256": "aa4d04001d1bb2a49ce5fca1df66b0f3d538deb15e6b6e23320a50e1b941d1ec"
+        },
+        {
+          "mode": "100644",
+          "path": "langfuse-multi-node/references/acceptance.md",
+          "sha256": "14c280b133cd95a079782f54c798db289804a6826ca75a0a07b9fa421e817fb4"
+        },
+        {
+          "mode": "100644",
+          "path": "langfuse-multi-node/references/failure-catalogue.md",
+          "sha256": "5efbb0fce0498554e810b258cfb9ef29f8a52f04358af4ebb778c47cee1c680a"
+        },
+        {
+          "mode": "100644",
+          "path": "langfuse-multi-node/references/pins.md",
+          "sha256": "e865e2aa39b7e6e0078bb2af3581a64865aa6ce4b47b5587732aec48b32ead0e"
+        },
+        {
+          "mode": "100644",
+          "path": "n8n-single-node/SKILL.md",
+          "sha256": "3120417dae5aa991f9c6ec78bfb0ff8ee8b29dfc717ab76c2788c6eca511da31"
+        },
+        {
+          "mode": "100644",
+          "path": "n8n-single-node/evals/evals.json",
+          "sha256": "1a0b268bf2ea2a7fc2b01a8f3a70753b58c47b6648c826b2eaebbb18a842959a"
+        },
+        {
+          "mode": "100644",
+          "path": "n8n-single-node/references/acceptance.md",
+          "sha256": "7dba75be7b17d488b96a29d9d4a3e2bd64ceb67f7556e2725d779eab3b6dac79"
+        },
+        {
+          "mode": "100644",
+          "path": "n8n-single-node/references/aws.md",
+          "sha256": "d8d70cca36eb2eed5a959f13ee97803163e277843b426346728ea8bfb203dd97"
+        },
+        {
+          "mode": "100644",
+          "path": "n8n-single-node/references/failure-catalogue.md",
+          "sha256": "4fb627d6bcdf39df6ae598e49049cf5b116e5eddec77e215c8be375e7348bb97"
+        },
+        {
+          "mode": "100644",
+          "path": "n8n-single-node/references/pins.md",
+          "sha256": "4dd44139a09aebe6f28796fd77f4fe82447501971c864fd0cf95d5049f6a9d94"
+        },
+        {
+          "mode": "100644",
+          "path": "neon-multi-node/SKILL.md",
+          "sha256": "8185f5fffdedb4c62471ac75e8ccfecd2838b1d53fe24776701a5b0116155dbd"
+        },
+        {
+          "mode": "100644",
+          "path": "neon-multi-node/evals/evals.json",
+          "sha256": "f681ff5a048737e289de74557e1098f0780f968ded01472830bdac2d484aa5ed"
+        },
+        {
+          "mode": "100644",
+          "path": "neon-multi-node/references/acceptance.md",
+          "sha256": "2394b1c6cde44729defad7dad0da71a81e905b1998206d5827f94be30ee6634a"
+        },
+        {
+          "mode": "100644",
+          "path": "neon-multi-node/references/contracts.md",
+          "sha256": "1f9104417700ef3b6a27a58f9268efd70442c60e598548eedac1d1db2cae2b9c"
+        },
+        {
+          "mode": "100644",
+          "path": "neon-multi-node/references/failure-catalogue.md",
+          "sha256": "e320d22907121376521b5212c1e8bfdb9f89f170fe0264ab438bc4a0f91384b4"
+        },
+        {
+          "mode": "100644",
+          "path": "neon-multi-node/references/pins.md",
+          "sha256": "46bedee24da453de554bade181ddaa97d04dcffb6ae61a425e1b254208a6e946"
+        },
+        {
+          "mode": "100644",
+          "path": "neon-multi-node/references/runtimes.md",
+          "sha256": "891e3b430cb6fd575a47c678e8791cc90b44cce0aa6b6270f2efe476ed3aaa17"
+        },
+        {
+          "mode": "100644",
+          "path": "neon-single-node/SKILL.md",
+          "sha256": "2ad9c1202a7ec5242b652a5e528a47e54258c9502e39b41afb07d51420bf1f30"
+        },
+        {
+          "mode": "100644",
+          "path": "neon-single-node/evals/evals.json",
+          "sha256": "1a5c233adf313c44292ba88116cd0b65556536aeef8751dc44e84beb0956951b"
+        },
+        {
+          "mode": "100644",
+          "path": "neon-single-node/references/acceptance.md",
+          "sha256": "9b8b523de4465fe3f2829722d6320da65119daffbe9cb0aad091874dc224daa3"
+        },
+        {
+          "mode": "100644",
+          "path": "neon-single-node/references/failure-catalogue.md",
+          "sha256": "e8033e2ccf5ed67dd37734fed89200eecf51e025fa771249286e107a1b2c9737"
+        },
+        {
+          "mode": "100644",
+          "path": "neon-single-node/references/pins.md",
+          "sha256": "525e0aede97a8bc2e47d950f3c435a7e4c65162bb2c8556273ece0ca802cbd22"
+        },
+        {
+          "mode": "100644",
+          "path": "posthog-single-node/SKILL.md",
+          "sha256": "bd7137eac766eb9b5ee4769f4f0af2e89789c7aa331e8728056424bae558b057"
+        },
+        {
+          "mode": "100644",
+          "path": "posthog-single-node/evals/evals.json",
+          "sha256": "2255fe2c6de08d147659446772c034e8a02cfeaf5a53241fb7604f1016bd637a"
+        },
+        {
+          "mode": "100644",
+          "path": "posthog-single-node/references/acceptance.md",
+          "sha256": "59a5fb2c3714af7eb9d670d317356c6be38c4e30a9c13cc013771dcd8b5019ba"
+        },
+        {
+          "mode": "100644",
+          "path": "posthog-single-node/references/failure-catalogue.md",
+          "sha256": "19fac88db28757248d0b5fdd65aaa879aab06ef0a1712a9a262ed3ff079a1ebd"
+        },
+        {
+          "mode": "100644",
+          "path": "posthog-single-node/references/pins.md",
+          "sha256": "93a5411863290e2ebea26672a11e3fe6ffc7083479f7deb4f2569a0c8486b5be"
+        },
+        {
+          "mode": "100644",
+          "path": "redis-operator-kubernetes/SKILL.md",
+          "sha256": "e847d54b94046a9fb29d87c2f85a5ec49b27f67fc3e28170acfeafddbe3ce276"
+        },
+        {
+          "mode": "100644",
+          "path": "redis-operator-kubernetes/evals/evals.json",
+          "sha256": "771280a97d9e5214f95ec70ea84d2acca9f90f09c07a4d1e6954605f3ae6cf5b"
+        },
+        {
+          "mode": "100644",
+          "path": "redis-operator-kubernetes/references/acceptance.md",
+          "sha256": "4fb3e1065f175aeff14c1e2cc1165058e7039f86e94048a0b5dae5b69c0b14a4"
+        },
+        {
+          "mode": "100644",
+          "path": "redis-operator-kubernetes/references/contract.md",
+          "sha256": "81381b27ffd88f6273da422ae3db44f45c31ac20b5ec321fb6082b3e46f9d41a"
+        },
+        {
+          "mode": "100644",
+          "path": "redis-operator-kubernetes/references/failure-catalogue.md",
+          "sha256": "2a8be95b8a5a84d897e0898bc1a724d362f6dacdd5f50b71c2d316556ac2fe65"
+        },
+        {
+          "mode": "100644",
+          "path": "redis-operator-kubernetes/references/pins.md",
+          "sha256": "3667e5911c2fe01437aefde37e1ce90a57ea26319a7f069ef78a173031bd2b07"
+        },
+        {
+          "mode": "100644",
+          "path": "redis-single-node/SKILL.md",
+          "sha256": "c90e92017e7060c9e258c3117bf672bd27edaaadcabf68229d32df0c2c43517e"
+        },
+        {
+          "mode": "100644",
+          "path": "redis-single-node/evals/evals.json",
+          "sha256": "fc01d2344ea7cabf56dbad725b2fd5112d60556f72a8b6defe5f86169327c280"
+        },
+        {
+          "mode": "100644",
+          "path": "redis-single-node/references/acceptance.md",
+          "sha256": "076e726a141ad789c1fac576cb688d37ab770fac4a1167f63b9c8a0158757c2b"
+        },
+        {
+          "mode": "100644",
+          "path": "redis-single-node/references/failure-catalogue.md",
+          "sha256": "5a03d60f364532a5542afc42a23ae19ab74f96080ac834ee0a405ffda1749661"
+        },
+        {
+          "mode": "100644",
+          "path": "redis-single-node/references/pins.md",
+          "sha256": "9c5b09381847ffae1c771727b0dfe62da69974d3be51c5cb866d4bb2393dcc03"
+        },
+        {
+          "mode": "100644",
+          "path": "refresh-oci-token/SKILL.md",
+          "sha256": "69089b520e5ef0d96114ca161a47c42247cce29e66f202ab24973ba4df61bbe9"
+        },
+        {
+          "mode": "100755",
+          "path": "refresh-oci-token/refresh-oci-token.clj",
+          "sha256": "d496ac47e89526bffe4d53f31ee60411605202c65279d7a973fd7e3012e0cff7"
+        },
+        {
+          "mode": "100644",
+          "path": "rybbit-single-node/SKILL.md",
+          "sha256": "55fa219666d06ea1b8dff826614e6d2b98196f33cafe63f0b48d91ba2b61989f"
+        },
+        {
+          "mode": "100644",
+          "path": "rybbit-single-node/evals/evals.json",
+          "sha256": "71224edd31643164adc01ad37601d0695e18ff8fe340c84f1dae4044af414029"
+        },
+        {
+          "mode": "100644",
+          "path": "rybbit-single-node/references/acceptance.md",
+          "sha256": "4167a58814827f5a85d750b327ef6ed7c77691e88d5724ecef491b40817ffccf"
+        },
+        {
+          "mode": "100644",
+          "path": "rybbit-single-node/references/failure-catalogue.md",
+          "sha256": "77892d167ca4047121bd916177b97c04a0deecb5e34919089a6dfbf86ff3ca8d"
+        },
+        {
+          "mode": "100644",
+          "path": "rybbit-single-node/references/pins.md",
+          "sha256": "2f60ede5078e91367cf1625cca129252402c8b457a6d7dfd43f6d6df700045c2"
+        },
+        {
+          "mode": "100644",
+          "path": "rybbit-single-node/references/providers.md",
+          "sha256": "3b5053f4aee39d35b1252c77b489d01f6be0755fb67f78daf2018186ba966324"
+        }
+      ],
+      "manifestSha256": "ec77f681613c59fc283ed47c2058840d745b93efb7cc70f89cea309afbe1c856",
+      "parserVersion": "2",
+      "projectionSha256": "84dec95889232cdd52c9e3539d5fe8f433e055cd66aca7e5b8bea39f94b751c9",
+      "repository": "https://github.com/getcolors/skills",
+      "requestedRef": "HEAD",
+      "requestedSource": "getcolors/skills",
+      "selection": {
+        "all": false
+      },
+      "skills": [
+        {
+          "name": "agent-network-doks",
+          "sourceDirectory": "agent-network-doks",
+          "versionId": "a418e00ec8128cbae08653413831caa45fa7747beeea4eb357869867b1b5b385"
+        },
+        {
+          "name": "agent-network-kubernetes",
+          "sourceDirectory": "agent-network-kubernetes",
+          "versionId": "fe162dcc347f521c162d6c33256c9327ba8094ba241e6364484c5f1607453646"
+        },
+        {
+          "name": "agent-network-single-node",
+          "sourceDirectory": "agent-network-single-node",
+          "versionId": "598ea801e8dab5722ac9e991517abcff191ba8a3e9bf3c03e32c07ff1216833b"
+        },
+        {
+          "name": "automq-multi-node",
+          "sourceDirectory": "automq-multi-node",
+          "versionId": "c672ce61d4cb64c46e8c1f14148a9def17605719ee1b665e0e2d96ee24f85808"
+        },
+        {
+          "name": "clickhouse-replicated",
+          "sourceDirectory": "clickhouse-replicated",
+          "versionId": "80c6a609bf2865fe5f0412990b8c8ff722eb7edbe0ee94fdec866bededb8b539"
+        },
+        {
+          "name": "langfuse-multi-node",
+          "sourceDirectory": "langfuse-multi-node",
+          "versionId": "da32c1e8c71ae1759d2cb5466e630da466e187381c001448dd299a08487f62bb"
+        },
+        {
+          "name": "n8n-single-node",
+          "sourceDirectory": "n8n-single-node",
+          "versionId": "d94661011986069e94aa8982a5d1654313c23f795ba0f1e09f24859f15f70f35"
+        },
+        {
+          "name": "neon-multi-node",
+          "sourceDirectory": "neon-multi-node",
+          "versionId": "3b5e82f1c9a4e6007d69caa5bff43bced7719d566f03e1c3e7ffbf955cc080d9"
+        },
+        {
+          "name": "neon-single-node",
+          "sourceDirectory": "neon-single-node",
+          "versionId": "7aa2034b2b3aa012feb01c55278f7d03f1af6856045758aec01b14ef5a0f4066"
+        },
+        {
+          "name": "posthog-single-node",
+          "sourceDirectory": "posthog-single-node",
+          "versionId": "fbc57a791e955757d0d879006695cc264b23ad16435535826178bad3653a0832"
+        },
+        {
+          "name": "redis-operator-kubernetes",
+          "sourceDirectory": "redis-operator-kubernetes",
+          "versionId": "b51cf9f91fdac07bcba0af20e9a213c8368faca949e2ac82a33639013a1cd5a6"
+        },
+        {
+          "name": "redis-single-node",
+          "sourceDirectory": "redis-single-node",
+          "versionId": "6e8961d46a7c8bda07defbf639967dc5b28c995d331fbbcd8509454de2583ed5"
+        },
+        {
+          "name": "refresh-oci-token",
+          "sourceDirectory": "refresh-oci-token",
+          "versionId": "0c76718447d465cbf6f1fb13c845cca5a040d170f3870f80c5505d5425cdfdff"
+        },
+        {
+          "name": "rybbit-single-node",
+          "sourceDirectory": "rybbit-single-node",
+          "versionId": "89a3b8b0eaae2b4ab4121993b9a709be29069860e47daa981f10244d60eb400f"
+        }
+      ]
+    }
+  ]
+}

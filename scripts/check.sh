@@ -23,6 +23,7 @@ psql -X -v ON_ERROR_STOP=1 -f sql/002_roles.sql >/dev/null
 psql -X -v ON_ERROR_STOP=1 -f sql/003_acquisition.sql >/dev/null
 psql -X -v ON_ERROR_STOP=1 -f sql/004_context_runtime.sql >/dev/null
 psql -X -v ON_ERROR_STOP=1 -f sql/005_portable_projects.sql >/dev/null
+psql -X -v ON_ERROR_STOP=1 -f sql/006_ingestion.sql >/dev/null
 psql -X -v ON_ERROR_STOP=1 -f data/skills.sql >/dev/null
 # Re-import must succeed without mutating historical rows.
 psql -X -v ON_ERROR_STOP=1 -f data/skills.sql >/dev/null

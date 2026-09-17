@@ -8,3 +8,5 @@ __pycache__/
 dist/
 .devenv/
 .direnv/
+.context-skills.lock.json.guard
+.context-skills.lock.json.*.pending

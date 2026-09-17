@@ -4,7 +4,7 @@ Status: proposed contract for this repository. This document is not an extension
 
 ## 1. Scope and decision
 
-Use PostgreSQL to store and query the fourteen requested skill directories. Thirteen are Context Skills. `refresh-oci-token` is a generic procedural skill and must retain that classification. Its executable script is stored as evidence, never executed during ingestion or retrieval.
+Use PostgreSQL to store and query selected upstream skill payloads. The supplied snapshot covers the fourteen originally requested skill directories. Thirteen are Context Skills. `refresh-oci-token` is a generic procedural skill and must retain that classification. Its executable script is stored as evidence, never executed during ingestion or retrieval.
 
 Keep Git as the authoring system for established skill content. The database contains versioned snapshots and searchable projections. Agent observations and task state belong in separate working tables. An agent can choose what to load and what to retain for its task. It cannot turn an unverified observation into an authoritative Context Skill merely by writing a row.
 
@@ -12,7 +12,7 @@ The initial deployment boundary is one trusted workspace. A database credential 
 
 ## 2. Source and version contract
 
-Skills MUST be acquired through an `npx skills` invocation pinned to an exact CLI version and an identified upstream commit. The importer MUST select skills explicitly and download them into an isolated temporary project. A sibling checkout, working-tree edits, and an unpinned branch MUST NOT supply the imported payload.
+Users MAY supply a repository default branch, branch, tag, or full commit. The importer MUST resolve the requested reference once to an immutable full SHA before acquisition. Conflicting URL and explicit revision selectors MUST fail. Skills MUST be acquired through an `npx skills` invocation at that full commit. The importer MUST resolve and record the actual CLI version, then invoke that exact version. Different acquisitions MAY use different CLI versions when independent payload verification succeeds. The importer MUST select named skills or an explicit `--all` selection and download them into an isolated temporary project. A sibling checkout or working-tree edits MUST NOT supply the imported payload.
 
 The importer MUST persist the complete selected skill payload byte-for-byte in PostgreSQL. This includes `SKILL.md`, references, evals, scripts, binary assets, and every other regular file committed beneath each selected skill directory. Each file MUST retain its relative path, SHA-256 digest, source repository, source commit, and skill association. Text decoding MUST NOT alter stored bytes. Searchable text may be derived only when decoding succeeds without loss.
 
@@ -20,13 +20,23 @@ The importer MUST independently fetch the identified upstream commit and compare
 
 Acquisition provenance MUST record the source URL, resolved commit, exact CLI package version, invocation arguments, selected skills, acquisition time, and verified file inventory with hashes. Temporary filesystem paths MUST NOT become retrieval locations or persistent dependencies. Once loaded, the database MUST supply the complete original payload, searchable projections, and citations without staging files, an installed skill directory, or a local source clone.
 
-The reference importer uses `npx --yes skills@1.6.0 add` with a commit-qualified GitHub URL, explicit skill names, and `--agent codex --copy --yes`. It verifies the downloaded files against an independent Git fetch of the same commit. It stores scripts as bytes and never executes them.
+The historical bundled-snapshot rebuilder uses `npx --yes skills@1.6.0 add` with a commit-qualified GitHub URL, explicit skill names, and `--agent codex --copy --yes`. It verifies the downloaded files against an independent Git fetch of the same commit. It stores scripts as bytes and never executes them.
 
 A skill version MUST identify the exact imported content and parser version. Acquisition time records when the download completed verification. It is not a build-verification date. The importer MUST NOT fill a missing verification date with that timestamp. A rerun against identical content MUST preserve version identity without duplicate versions. A changed payload or parser MUST produce a new version and preserve earlier evidence. Acquisition events may differ without changing the content version. The reference `--check` command downloads and verifies the source again and compares content and deterministic SQL while ignoring only the new acquisition timestamp and identifier. It does not overwrite the recorded acquisition provenance.
 
 Section projections MUST retain their source file and line interval. Heading detection MUST respect fenced code blocks. The complete source remains available so a consumer can recover surrounding qualifications. The parser MUST identify its own version so projections can be regenerated after a parsing fix.
 
 Pins MUST preserve source text and distinguish extracted values from unparsed prose. A detected version string does not establish a dependency relationship unless its source supports that relationship. Evaluation cases MUST preserve the source case identifier, prompt, expected behavior, assertions, and any irregular extra fields.
+
+### Shared catalog lock
+
+`context-skills.lock.json` MUST identify the repository, original requested source/reference, resolved commit, selected skill names and source directories, content version IDs, file inventory with modes and hashes, parser version, and derived-record digest. It MUST exclude acquisition timestamps, credentials, local paths, and working notes. The generating acquisition CLI version is informational; locked replay MAY use another exact CLI release if all payload and projection checks pass.
+
+`sync --locked` MUST use immutable locked commits, preserve the recorded selection, reject an unsupported parser or changed payload/projections, and leave the lockfile unchanged. `update` MUST deliberately resolve the original references again and reevaluate original `--all` selections. Named ingestion merges a repository's selection and advances those names together to the requested revision. Lock entries and catalog names MUST NOT silently cross repository ownership boundaries.
+
+All acquired bundles for a command MUST commit in one database transaction with an immutable copy of the lock document. Missing, transformed, or incomplete content MUST fail before any catalog changes commit. Existing versions and working notes MUST survive ingestion. Locked replay covers selected content and current pointers, not unrelated database rows or local acquisition events. A lockfile is not an archive or a replication protocol.
+
+The importer MUST stage and flush a replacement lock before database commit, then atomically publish it afterward. A database failure MUST leave the prior public lockfile unchanged. If file publication fails after commit, the helper MUST report that the database committed, return a distinct status, and provide the digest needed to export the committed lock document. It MUST NOT claim atomicity across PostgreSQL and the filesystem.
 
 ## 3. Relational responsibilities
 
@@ -80,7 +90,7 @@ JSON is the default for nested provenance. CSV is optional for flat tables. The 
 
 ## 6. Privileges and untrusted content
 
-Use separate owner, importer, catalog-reader, and working-memory-writer responsibilities. The agent MUST NOT connect as the owner, a superuser, or a role with `BYPASSRLS`, role administration, or server-file access. A read role MUST NOT inherit an importer or writer role. Revoke schema creation and unnecessary function execution where they could expose mutation or external access.
+Use separate owner, importer, catalog-reader, and working-memory-writer responsibilities. The retrieval and working-memory agent MUST NOT connect as the owner, a superuser, or a role with `BYPASSRLS`, role administration, or server-file access. The separately invoked administrative ingestion helper uses the managed owner connection for verified catalog writes and does not expose it through the query runner. A read role MUST NOT inherit an importer or writer role. Revoke schema creation and unnecessary function execution where they could expose mutation or external access.
 
 The proposed production executor MUST audit accessible extensions, functions, and `SECURITY DEFINER` code. A read-only query can still call a function. Read-only transactions and a replica supplement grants; they do not replace an authorization boundary.
 
@@ -141,6 +151,7 @@ The repository implements a local PostgreSQL service, fixed SQL operations, and 
 | Skill identities and versions | `catalog.skill` and `catalog.skill_version` distinguish kind, content version, source revision, and importer version. | Add a documented policy for retiring published versions. |
 | Original files and citations | `catalog.source_file` stores all verified payload bytes and hashes, including binary files. Markdown files supply section headings and line bounds. The current-section view builds commit-based citations. | Add explicit media types and database ingestion timestamps if a service needs them. |
 | Skill acquisition | Pinned `skills@1.6.0` downloads are verified against an independent upstream Git fetch. `catalog.acquisition` stores immutable acquisition provenance; `catalog.skill_acquisition` links it to content versions. Migration 003 adds these tables to existing databases. | Review future CLI versions before changing the pin. |
+| Shared ingestion lock | `ingest-context-skills` resolves mutable source references, acquires verified selected payloads, commits all imports transactionally, and reproduces locked content on another managed instance. Migration 006 stores source resolutions and recoverable lock snapshots. | Content-addressed archives for unavailable upstream sources are not provided. |
 | Pin evidence | `catalog.pin_row` preserves table cells and source locations. | Extraction status is not a dedicated field. Prose pins remain in sections and require interpretation. |
 | Imported evals | `catalog.eval_case` preserves prompts, assertions, expected output, and raw JSON. | Run model-based routing and diagnosis evaluation. Imported cases alone are not evaluation results. |
 | Catalog changes | Version tables reject updates and deletes. A current-version pointer selects active content. | Review and promotion are not implemented. Immutability does not restrict a database owner who can alter the schema. |

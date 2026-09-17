@@ -6,9 +6,9 @@ Run date: 2026-09-17. Database: PostgreSQL 18.6. Source snapshot: `getcolors/ski
 
 - The importer downloaded all fourteen selected skills through the pinned CLI in a temporary project. An independent fetch of the same upstream commit confirmed all 80 file paths and exact bytes. The regenerated snapshot preserves the previous snapshot's source bytes.
 - A remote acquisition with `--check` verified the recorded payload, acquisition recipe, manifest, and SQL after the runtime changes. It left the original acquisition timestamp and identifier unchanged.
-- All 58 Python discovery tests and 13 runner integration tests passed. Import checks cover payload completeness, changed bytes, installer omissions, extra files, binary assets, unsafe paths, symlinks, Gitlinks, pinned commands, staging cleanup, revision identity, acquisition provenance, and deterministic artifacts.
+- All 88 Python discovery tests and 13 runner integration tests passed. Import checks cover payload completeness, changed bytes, installer omissions, extra files, binary assets, unsafe paths, symlinks, Gitlinks, pinned commands, staging cleanup, revision identity, acquisition provenance, and deterministic artifacts.
 - Parser regressions cover delimiter text inside descriptions, closing fences with trailing text, tables inside code fences, and Unicode separators that must not shift source line citations.
-- `scripts/check.sh` created a disposable PostgreSQL cluster, applied migrations 001 through 005, and loaded the seed twice. Integrity assertions, immutable acquisition records, foreign keys, and SQL examples passed.
+- `scripts/check.sh` created a disposable PostgreSQL cluster, applied migrations 001 through 006, and loaded the seed twice. Integrity assertions, immutable acquisition records, foreign keys, and SQL examples passed.
 - Database retrieval reproduced every file's bytes, hash, Git mode, and line count. Acquisition fields, timestamps, skill links, and the reconstructed manifest digest matched the snapshot. A binary fixture preserved all byte values, NUL bytes, and line endings.
 - A separate disposable database exercised migration 003 with historical rows already present. Loading the new seed twice preserved the old bytes and left their unrecorded Git modes and acquisition links absent.
 - Restricted login connections could read acquisition provenance and could not change it. Catalog write denial, role escalation denial, and working-memory isolation checks passed.
@@ -47,6 +47,16 @@ The Blue-only `package-context-sql-blue` package was tested with an isolated loc
 Build output was deterministic without PostgreSQL on PATH. Create dry-run wrote no files and needed no database binaries. A copied launcher ran outside the checkout, and a built wheel ran build and dry-run with resources from its installed package directory. All nine packaged SQL, seed, and agent-skill resource files matched the source bytes. Both skill definitions passed validation.
 
 An independent agent installed the published Package Skill through `npx --yes skills@1.6.0 add` at commit `2a46bcc43d4842b6cb8ac61c2e4eb07293ca6c4f`, with no working-tree override. From a temporary deployment it ran build, dry-run, create, and status. The installed helper returned all 14 catalog skills and saved/restored a task through its custom connection binding. Repeated creation preserved the run UUID and note. Backup and shutdown passed. This test used the host runtime binaries; installation of the optional Nix toolchain was not exercised.
+
+## Shared ingestion lock
+
+Acquisition tests cover GitHub shorthand and reference URLs, conflicting selectors, exact runtime CLI resolution, nested skill directories, executable modes, malformed metadata, complete payload verification, and unsafe entries. The original snapshot still passes remote acquisition `--check` without changing its recorded bytes or SQL.
+
+Lock tests cover selection merging, deliberate updates, locked full-SHA replay, changed CLI versions with identical payloads, unchanged lock bytes on sync, parser and projection mismatch, malformed JSON, duplicate keys, unsafe paths, and duplicate skill ownership. Dry runs write neither lockfiles nor database records. Retained entries from other repositories are acquired at their locked commits and included in the same transaction.
+
+Database tests reproduce version, file, section, pin, and eval records on an independent managed instance. They reject changed or missing immutable records, preserve task notes, deny reader metadata writes, and roll back earlier sources and current pointers when a later source fails. A locked import snapshot commits with its payload. Simulated file-publication failure leaves a recoverable database snapshot and pending file; digest-based export reconstructs the lock.
+
+The persistent instance was backed up before migration 006. The new helper then acquired the original fourteen selected skills through the runtime-resolved CLI and verified all 80 files. It wrote the shared `context-skills.lock.json` and stored its digest `d0e562ebf2a9ec82f904a38ad7f90b10f4cbb815cf560ec624fc8aca1e2e223e` in PostgreSQL. A before/after digest confirmed every existing working note was unchanged. The packaged wheel contains the exact importer and migration source bytes.
 
 ## Earlier page checks
 

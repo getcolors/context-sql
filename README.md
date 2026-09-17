@@ -13,6 +13,8 @@ The supplied essays describe this approach but do not define a formal protocol. 
 | [sql/003_acquisition.sql](sql/003_acquisition.sql) | Immutable acquisition provenance linked to skill versions |
 | [sql/004_context_runtime.sql](sql/004_context_runtime.sql) | Original project-path and task keys for working memory |
 | [sql/005_portable_projects.sql](sql/005_portable_projects.sql) | Portable project IDs, separate local paths, and preserved legacy task identities |
+| [sql/006_ingestion.sql](sql/006_ingestion.sql) | Multi-repository acquisition, source resolution, and recoverable lock snapshots |
+| [skills/ingest-context-skills/SKILL.md](skills/ingest-context-skills/SKILL.md) | Verified ingestion and shared catalog locks |
 | [skills/sql-context/SKILL.md](skills/sql-context/SKILL.md) | Agent workflow and its bounded SQL runner |
 | [skills/package-context-sql-blue/SKILL.md](skills/package-context-sql-blue/SKILL.md) | Package Skill to create and initialize PostgreSQL on a new local machine |
 | [scripts/local_db.py](scripts/local_db.py) | Initialize, start, stop, inspect, and back up local PostgreSQL |
@@ -79,6 +81,49 @@ Open a new Codex session after installation and invoke `$sql-context`. The [Pack
 
 The repository's root [colors.yml](colors.yml) supplies the same defaults for running `./blue` from a source checkout. Use `CONTEXT_SQL_LIB_ROOT="$PWD" ./blue ...` to test uncommitted package changes. After pushing a package commit, `python3 scripts/pin.py` stamps the launcher with its published SHA. Commit and push the updated launcher separately.
 
+## Ingest and share Context Skills
+
+Use the `ingest-context-skills` Agent Skill to add verified payloads to an initialized database. Its `context-skills` helper accepts GitHub repository URLs or `owner/repo`, a branch, tag, or commit, and explicit skill names. It resolves the source reference once, then downloads through `npx skills` at that exact commit. It resolves the current CLI release once per command and records the version it invokes. Use `--skills-cli-version 1.6.0` when you need a particular CLI; matching source bytes and projections remain mandatory.
+
+From this checkout:
+
+```sh
+./context-skills ingest getcolors/skills --skill redis-single-node --dry-run
+./context-skills ingest getcolors/skills --skill redis-single-node
+./context-skills ingest getcolors/skills --skill neon-single-node --revision main
+```
+
+Named selections merge with earlier selections for the same repository in the lockfile. All selected names in that repository use the newly requested revision together. `--all` explicitly selects every discovered skill and remains active for future updates. Selection does not establish compliance with a Context Skill standard. A URL such as `https://github.com/getcolors/skills/tree/main` is also accepted; conflicting URL and `--revision` values are errors. Acquisition fails on missing, modified, extra, or unsafe files and never fills omissions from Git.
+
+The helper writes `context-skills.lock.json`. Commit this file to share the selected catalog content. It records repository references, full commits, selected skill directories and version IDs, every file path/mode/hash, the parser version, and a digest of the derived records. The acquisition CLI version is informational. Timestamps, credentials, task notes, and local paths are not in the lock. The supplied lock covers the original fourteen-skill corpus, including the generic OCI procedure.
+
+On another machine initialized by `package-context-sql-blue`:
+
+```sh
+./context-skills sync --locked
+```
+
+Sync uses only locked source commits and selections. It requires the matching parser and verifies both original bytes and derived records. It does not rewrite the lockfile or discover new skills, even for an earlier `--all` selection. The covered records and selected current-version pointers match across databases; unrelated skills, historical versions, and task notes remain untouched. Acquisition events belong to each machine. This is reproducible installation, not database replication.
+
+To advance the requested references deliberately:
+
+```sh
+./context-skills update --dry-run
+./context-skills update
+```
+
+Review the lockfile diff. Update reevaluates `--all` selections; pinned commit requests stay pinned. Names already owned by another repository are rejected rather than silently reassigned. A lockfile does not archive upstream files, so the source must remain available.
+
+All ingestion commands accept `--lockfile PATH`, `--state-dir PATH`, and `--config PATH`. The state directory identifies the managed administrative connection; application reader/writer credentials remain unchanged. Dry runs verify downloads without database or lockfile writes. Run `python3 scripts/local_db.py init` once when upgrading an older instance to apply migration 006. This helper is separate from the bounded `sql-context` reader and cannot be invoked as arbitrary SQL through it.
+
+Every database import commits all acquired sources and its lock snapshot in one transaction. Failed verification or database writes preserve the previous lockfile and catalog pointers. Filesystem publication happens after the database commit. If publication fails, the command exits with code 3 and reports the committed digest; recover the file with:
+
+```sh
+./context-skills export-lock --digest <reported-digest> --lockfile context-skills.lock.json
+```
+
+Use the same custom instance flags when recovering. Keep only the public lockfile in version control; the adjacent hidden guard and pending files are local coordination and recovery files.
+
 ## Use locally from a checkout
 
 Requirements are PostgreSQL 16 or newer, Python 3.11 or newer, and `uv` on a Unix host. Automatic service startup uses systemd. From this checkout:
@@ -141,6 +186,7 @@ psql -X -v ON_ERROR_STOP=1 -d context_sql -f sql/002_roles.sql
 psql -X -v ON_ERROR_STOP=1 -d context_sql -f sql/003_acquisition.sql
 psql -X -v ON_ERROR_STOP=1 -d context_sql -f sql/004_context_runtime.sql
 psql -X -v ON_ERROR_STOP=1 -d context_sql -f sql/005_portable_projects.sql
+psql -X -v ON_ERROR_STOP=1 -d context_sql -f sql/006_ingestion.sql
 psql -X -v ON_ERROR_STOP=1 -d context_sql -f data/skills.sql
 psql -X -v ON_ERROR_STOP=1 -d context_sql \
   -v symptom='NOAUTH' \
@@ -148,7 +194,7 @@ psql -X -v ON_ERROR_STOP=1 -d context_sql \
   -f sql/queries.sql
 ```
 
-Run the migrations once in order. Migration 005 requires an owner with `BYPASSRLS` or superuser access to backfill all historical owners; it fails rather than skip hidden rows. An existing database with migrations 001 and 002 needs migration 003 before loading the seed and migrations 004 and 005 before using the task runner. The seed may run again without duplicating rows. It explicitly selects the imported versions as current, so loading an older seed intentionally changes the current pointers. Historical version rows remain intact.
+Run the migrations once in order. Migration 005 requires an owner with `BYPASSRLS` or superuser access to backfill all historical owners; it fails rather than skip hidden rows. An existing database with migrations 001 and 002 needs migration 003 before loading the seed and migrations 004 and 005 before using the task runner, followed by migration 006 for ingestion. The seed may run again without duplicating rows. It explicitly selects the imported versions as current, so loading an older seed intentionally changes the current pointers. Historical version rows remain intact.
 
 Create application login roles separately. A retrieval login should inherit only `context_reader`. A separately authorized note-writing login can inherit `context_writer`. Neither should own database objects or have role administration, superuser, or `BYPASSRLS` privileges. Working memory policies use the authenticated `session_user`; a shared pool login does not separate application users. The catalog is shared by one trusted workspace.
 
