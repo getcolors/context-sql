@@ -58,6 +58,8 @@ Database tests reproduce version, file, section, pin, and eval records on an ind
 
 The persistent instance was backed up before migration 006. The new helper then acquired the original fourteen selected skills through the runtime-resolved CLI and verified all 80 files. It wrote the shared `context-skills.lock.json` and stored its digest `d0e562ebf2a9ec82f904a38ad7f90b10f4cbb815cf560ec624fc8aca1e2e223e` in PostgreSQL. A before/after digest confirmed every existing working note was unchanged. The packaged wheel contains the exact importer and migration source bytes.
 
+An independent agent installed both published skills at commit `93ed427541291c508cfd587fb7e7f2c707a50ff0` through `npx --yes skills@1.6.0 add`. It created an isolated managed instance, copied only the shared lock as input, and performed two real locked syncs without a source override. Reader SQL matched all 80 payloads, hashes, modes, and all 14 version IDs to the lock. The instance recorded two source resolutions and one immutable lock snapshot. The saved observation and exact lockfile bytes survived the second sync. `update --dry-run` left database counts and both lockfile copies unchanged. The agent stopped and removed the temporary instance.
+
 ## Earlier page checks
 
 On 2026-09-16, Chromium rendered the page at desktop and mobile widths without JavaScript errors or horizontal overflow. Query tabs, filtering, empty results, and expandable descriptions worked. The four displayed SQL examples ran against PostgreSQL. A temporary public tunnel returned the reviewed page bytes. Those browser and tunnel checks were not repeated for this change, which updates the page's explanatory text.
