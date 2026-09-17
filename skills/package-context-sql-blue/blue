@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Managed by scripts/pin.py after the package commit is pushed.
+package_revision=''
+blue_revision='290f313ead5ca162875c33a049c880da017eae09'
+package_url='https://github.com/getcolors/context-sql.git'
+blue_url='https://github.com/getcolors/blue.git'
+
+if ! command -v uv >/dev/null 2>&1; then
+  echo 'blue requires uv; enter the supplied devenv environment first' >&2
+  exit 2
+fi
+if [[ -n "${CONTEXT_SQL_LIB_ROOT:-}" ]]; then
+  package_source=$(cd "$CONTEXT_SQL_LIB_ROOT" && pwd)
+  if [[ ! -f "$package_source/pyproject.toml" ]]; then
+    echo 'CONTEXT_SQL_LIB_ROOT must name the context-sql package checkout' >&2
+    exit 2
+  fi
+  export CONTEXT_SQL_PACKAGE_REVISION=working-tree
+  package_args=(--with-editable "$package_source")
+else
+  if [[ ! "$package_revision" =~ ^[0-9a-f]{40}$ ]]; then
+    echo 'Package is not pinned yet; set CONTEXT_SQL_LIB_ROOT to its checkout' >&2
+    exit 2
+  fi
+  package_source="package-context-sql-blue @ git+$package_url@$package_revision"
+  export CONTEXT_SQL_PACKAGE_REVISION="$package_revision"
+  package_args=(--with "$package_source")
+fi
+exec uv run --no-project "${package_args[@]}" \
+  --with "blue @ git+$blue_url@$blue_revision" \
+  python -c 'from package_context_sql_blue.cli import main; main()' "$@"

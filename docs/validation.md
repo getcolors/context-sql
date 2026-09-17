@@ -6,7 +6,7 @@ Run date: 2026-09-17. Database: PostgreSQL 18.6. Source snapshot: `getcolors/ski
 
 - The importer downloaded all fourteen selected skills through the pinned CLI in a temporary project. An independent fetch of the same upstream commit confirmed all 80 file paths and exact bytes. The regenerated snapshot preserves the previous snapshot's source bytes.
 - A remote acquisition with `--check` verified the recorded payload, acquisition recipe, manifest, and SQL after the runtime changes. It left the original acquisition timestamp and identifier unchanged.
-- All 45 Python discovery tests and 13 runner integration tests passed. Import checks cover payload completeness, changed bytes, installer omissions, extra files, binary assets, unsafe paths, symlinks, Gitlinks, pinned commands, staging cleanup, revision identity, acquisition provenance, and deterministic artifacts.
+- All 58 Python discovery tests and 13 runner integration tests passed. Import checks cover payload completeness, changed bytes, installer omissions, extra files, binary assets, unsafe paths, symlinks, Gitlinks, pinned commands, staging cleanup, revision identity, acquisition provenance, and deterministic artifacts.
 - Parser regressions cover delimiter text inside descriptions, closing fences with trailing text, tables inside code fences, and Unicode separators that must not shift source line citations.
 - `scripts/check.sh` created a disposable PostgreSQL cluster, applied migrations 001 through 005, and loaded the seed twice. Integrity assertions, immutable acquisition records, foreign keys, and SQL examples passed.
 - Database retrieval reproduced every file's bytes, hash, Git mode, and line count. Acquisition fields, timestamps, skill links, and the reconstructed manifest digest matched the snapshot. A binary fixture preserved all byte values, NUL bytes, and line endings.
@@ -39,6 +39,12 @@ A separate disposable database applied migration 005 to historical runs owned by
 The persistent local instance was backed up before migration 005. Both notes from the earlier agent handoff and their citations restored identically after the migration and installed-skill update. The service remained active. The full database check script and a fresh pinned remote acquisition check passed after these changes.
 
 An independent agent used the installed skill to save a checkpoint for `getcolors/context-sql` and task `portable-project-identity`. It resumed from a temporary working directory without supplying a local path. Run `8388dcb4-1e4c-4a6e-8b13-bde4e68e0226`, the recorded checkout path, and the complete saved note were unchanged.
+
+## Local PostgreSQL Package Skill
+
+The Blue-only `package-context-sql-blue` package was tested with an isolated local state directory, connection file, and installed skill. Creation loaded the 14-skill, 80-file catalog. Repeating creation preserved credentials and saved notes. The installed helper used its recorded custom connection path without an environment override. Modified skills, unmanaged state, unrelated existing connection files, path aliases that overlap targets, invalid settings, and `COLORS_PAR_PROFILE` were rejected. Unrelated cloud credential environment variables did not enter the workflow or rendered plan.
+
+Build output was deterministic without PostgreSQL on PATH. Create dry-run wrote no files and needed no database binaries. A copied launcher ran outside the checkout, and a built wheel ran build and dry-run with resources from its installed package directory. All nine packaged SQL, seed, and agent-skill resource files matched the source bytes. Both skill definitions passed validation.
 
 ## Earlier page checks
 

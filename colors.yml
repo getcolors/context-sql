@@ -1,0 +1,6 @@
+profile: context-sql-local
+context-sql-state-dir: ~/.local/share/context-sql
+context-sql-config: ~/.config/context-sql/connections.json
+context-sql-skill-dir: ~/.codex/skills/sql-context
+context-sql-install-skill: true
+context-sql-service: false

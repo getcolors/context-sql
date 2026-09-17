@@ -5,7 +5,7 @@ cd "$(dirname "$0")/.."
 for tool in python3 initdb pg_ctl createdb psql uv; do
   command -v "$tool" >/dev/null || { echo "Missing tool: $tool" >&2; exit 1; }
 done
-python3 -m unittest discover -s tests -p 'test_*.py' -v
+uv run python -m unittest discover -s tests -p 'test_*.py' -v
 context_test_dir=$(mktemp -d /tmp/context-sql-check.XXXXXX)
 cleanup() {
   pg_ctl -D "$context_test_dir/pg" -m immediate -w stop >/dev/null 2>&1 || true

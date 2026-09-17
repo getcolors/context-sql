@@ -11,7 +11,7 @@ Use the helper at `scripts/context.py` relative to this skill directory:
 uv run --script <skill-directory>/scripts/context.py --help
 ```
 
-Replace `<skill-directory>` with the absolute directory containing this file. The helper reads `~/.config/context-sql/connections.json`, or the path set in `CONTEXT_SQL_CONFIG`. Do not display that file. If the connection fails, report the error and continue work that does not need saved context. Do not initialize or replace a database to recover a connection.
+Replace `<skill-directory>` with the absolute directory containing this file. The helper uses `CONTEXT_SQL_CONFIG` when set, otherwise the installed `connection-path` binding when present, otherwise `~/.config/context-sql/connections.json`. The Package Skill writes that binding for custom database locations. Do not display the connection credentials. If the connection fails, report the error and continue work that does not need saved context. Do not initialize or replace a database to recover a connection.
 
 ## Start or resume work
 

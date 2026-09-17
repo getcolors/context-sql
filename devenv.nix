@@ -1,0 +1,1 @@
+skills/package-context-sql-blue/devenv.nix

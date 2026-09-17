@@ -14,6 +14,7 @@ The supplied essays describe this approach but do not define a formal protocol. 
 | [sql/004_context_runtime.sql](sql/004_context_runtime.sql) | Original project-path and task keys for working memory |
 | [sql/005_portable_projects.sql](sql/005_portable_projects.sql) | Portable project IDs, separate local paths, and preserved legacy task identities |
 | [skills/sql-context/SKILL.md](skills/sql-context/SKILL.md) | Agent workflow and its bounded SQL runner |
+| [skills/package-context-sql-blue/SKILL.md](skills/package-context-sql-blue/SKILL.md) | Package Skill to create and initialize PostgreSQL on a new local machine |
 | [scripts/local_db.py](scripts/local_db.py) | Initialize, start, stop, inspect, and back up local PostgreSQL |
 | [sql/queries.sql](sql/queries.sql) | Routing, full-text and literal search, pins, evals, bounded note selection, and expiry cleanup |
 | [data/skills.json](data/skills.json) | Portable snapshot with base64 source bytes and derived records |
@@ -26,7 +27,58 @@ The snapshot contains **14 skills, 80 files, 755 sections, 179 pin rows, and 110
 
 The original files remain authoritative in `getcolors/skills`. This repository's data is a generated database snapshot, not another maintained implementation of their companion packages. Verification claims are source-reported. Importing the files does not repeat the builds described by those claims.
 
-## Use locally
+## Create on a new machine with the Package Skill
+
+The Blue Package Skill creates local PostgreSQL, loads the verified catalog, and installs the `sql-context` agent skill. Run it as your normal user with PostgreSQL 16 or newer binaries, Python 3.11 or newer, `uv`, and Git on `PATH`. The Package Skill includes an optional [devenv.nix](devenv.nix) toolchain. Skill acquisition also needs Node.js and `npx`.
+
+Create a deployment directory, then install from a reviewed full commit of this repository. Replace `<published-commit>` with that commit's 40-character SHA:
+
+```sh
+mkdir context-sql-local
+cd context-sql-local
+npx --yes skills@1.6.0 add \
+  'https://github.com/getcolors/context-sql/tree/<published-commit>' \
+  --skill package-context-sql-blue --agent codex --copy --yes
+cp .agents/skills/package-context-sql-blue/blue blue
+```
+
+If the host uses Nix, devenv, and direnv, copy the supplied toolchain files to install PostgreSQL and the other runtime tools into the development environment:
+
+```sh
+cp .agents/skills/package-context-sql-blue/devenv.nix devenv.nix
+cp .agents/skills/package-context-sql-blue/.envrc .envrc
+direnv allow
+```
+
+Create `colors.yml` with these non-secret settings:
+
+```yaml
+profile: context-sql-local
+context-sql-state-dir: ~/.local/share/context-sql
+context-sql-config: ~/.config/context-sql/connections.json
+context-sql-skill-dir: ~/.codex/skills/sql-context
+context-sql-install-skill: true
+context-sql-service: false
+```
+
+```sh
+./blue build
+./blue create --dry-run
+./blue create
+./blue status
+```
+
+`build` writes the plan under `.colors/<profile>/`. `create --dry-run` skips side effects. `create` initializes the cluster, applies migrations, imports the supplied catalog, and installs the agent skill. Existing instances keep their notes and credentials when you repeat `create`. The database and connection settings stay outside the checkout. PostgreSQL listens only on its private Unix socket.
+
+Set `context-sql-service: true` to enable a systemd user service on Linux. The default starts the instance without installing a service. Automatic startup before login also requires user lingering. Use `./blue stop`, `./blue start`, and `./blue backup` for local lifecycle operations. There is no `delete` or automated restore command.
+
+A new machine gets the catalog with empty task memory. Portable project IDs do not transfer notes between databases. To preserve task history, take a backup on the old machine and restore it separately.
+
+Open a new Codex session after installation and invoke `$sql-context`. The [Package Skill](skills/package-context-sql-blue/SKILL.md) manages the local database; the [agent skill](skills/sql-context/SKILL.md) queries its catalog and maintains task notes. The installed agent skill records the configured connection-file path, including custom paths. `CONTEXT_SQL_CONFIG` overrides it when needed. When updating the Package Skill, copy its `blue` launcher to the deployment root again after installation.
+
+The repository's root [colors.yml](colors.yml) supplies the same defaults for running `./blue` from a source checkout. Use `CONTEXT_SQL_LIB_ROOT="$PWD" ./blue ...` to test uncommitted package changes. After pushing a package commit, `python3 scripts/pin.py` stamps the launcher with its published SHA. Commit and push the updated launcher separately.
+
+## Use locally from a checkout
 
 Requirements are PostgreSQL 16 or newer, Python 3.11 or newer, and `uv` on a Unix host. Automatic service startup uses systemd. From this checkout:
 
@@ -125,7 +177,9 @@ A skill's version digest includes the source commit, file paths, Git modes, file
 With PostgreSQL binaries and Python dependencies on `PATH`:
 
 ```sh
-PATH="$PWD/.venv/bin:$PATH" ./scripts/check.sh
+uv sync
+./scripts/check.sh
+./scripts/launcher.sh
 ```
 
 The script creates and removes its own Unix-socket-only PostgreSQL clusters. Run it as a non-root user with `uv` available. It does not connect to the persistent service. It verifies source reconstruction, section coverage, deterministic SQL generation, schema loading, repeat import, foreign keys, immutable revisions, retrieval examples, denied catalog writes, and working-memory isolation. It compares every stored file and acquisition record with the snapshot, checks binary storage, and tests migration from a database with historical imports. Runner tests exercise paging, output limits, deadlines, rollback, and task restoration. Service tests also check SCRAM authentication, lifecycle commands, and backup restoration. Legacy role tests use trust authentication. Network transport remains untested. These checks use local fixtures; the importer command above separately verifies a real remote download.

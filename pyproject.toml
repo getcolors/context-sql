@@ -1,0 +1,31 @@
+[project]
+name = "package-context-sql-blue"
+version = "0.1.0"
+description = "Blue Package Skill for a local PostgreSQL context catalog and task memory"
+requires-python = ">=3.11"
+dependencies = [
+  "blue @ git+https://github.com/getcolors/blue.git@290f313ead5ca162875c33a049c880da017eae09",
+  "PyYAML>=6.0,<7",
+]
+
+[project.scripts]
+context-sql-blue = "package_context_sql_blue.cli:main"
+
+[tool.uv.sources]
+blue = { git = "https://github.com/getcolors/blue.git", rev = "290f313ead5ca162875c33a049c880da017eae09" }
+
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/package_context_sql_blue"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"sql" = "package_context_sql_blue/resources/sql"
+"data/skills.sql" = "package_context_sql_blue/resources/data/skills.sql"
+"skills/sql-context/SKILL.md" = "package_context_sql_blue/resources/skills/sql-context/SKILL.md"
+"skills/sql-context/scripts/context.py" = "package_context_sql_blue/resources/skills/sql-context/scripts/context.py"

@@ -83,7 +83,15 @@ def parser():
 
 
 def connection_settings(memory):
-    path = Path(os.environ.get('CONTEXT_SQL_CONFIG', '~/.config/context-sql/connections.json')).expanduser()
+    binding = Path(__file__).resolve().parent.parent / 'connection-path'
+    default = '~/.config/context-sql/connections.json'
+    if 'CONTEXT_SQL_CONFIG' not in os.environ and binding.exists():
+        if binding.stat().st_size > 4097:
+            raise ValueError('Installed connection path is too large')
+        default = binding.read_text().rstrip('\n')
+        if not Path(default).is_absolute() or '\n' in default or '\0' in default:
+            raise ValueError('Installed connection path must be absolute')
+    path = Path(os.environ.get('CONTEXT_SQL_CONFIG', default)).expanduser()
     info = path.lstat()
     if not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid() or info.st_mode & 0o077:
         raise ValueError('Connection config must be a private regular file owned by this user, mode 0600')

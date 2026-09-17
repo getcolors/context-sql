@@ -3,3 +3,8 @@ __pycache__/
 .venv/
 .env
 *.log
+.colors/
+.envrc.private
+dist/
+.devenv/
+.direnv/
