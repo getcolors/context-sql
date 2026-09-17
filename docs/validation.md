@@ -46,6 +46,8 @@ The Blue-only `package-context-sql-blue` package was tested with an isolated loc
 
 Build output was deterministic without PostgreSQL on PATH. Create dry-run wrote no files and needed no database binaries. A copied launcher ran outside the checkout, and a built wheel ran build and dry-run with resources from its installed package directory. All nine packaged SQL, seed, and agent-skill resource files matched the source bytes. Both skill definitions passed validation.
 
+An independent agent installed the published Package Skill through `npx --yes skills@1.6.0 add` at commit `2a46bcc43d4842b6cb8ac61c2e4eb07293ca6c4f`, with no working-tree override. From a temporary deployment it ran build, dry-run, create, and status. The installed helper returned all 14 catalog skills and saved/restored a task through its custom connection binding. Repeated creation preserved the run UUID and note. Backup and shutdown passed. This test used the host runtime binaries; installation of the optional Nix toolchain was not exercised.
+
 ## Earlier page checks
 
 On 2026-09-16, Chromium rendered the page at desktop and mobile widths without JavaScript errors or horizontal overflow. Query tabs, filtering, empty results, and expandable descriptions worked. The four displayed SQL examples ran against PostgreSQL. A temporary public tunnel returned the reviewed page bytes. Those browser and tunnel checks were not repeated for this change, which updates the page's explanatory text.

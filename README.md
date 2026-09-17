@@ -46,6 +46,7 @@ If the host uses Nix, devenv, and direnv, copy the supplied toolchain files to i
 
 ```sh
 cp .agents/skills/package-context-sql-blue/devenv.nix devenv.nix
+cp .agents/skills/package-context-sql-blue/devenv.lock devenv.lock
 cp .agents/skills/package-context-sql-blue/.envrc .envrc
 direnv allow
 ```

@@ -5,7 +5,7 @@ description: Create and initialize local PostgreSQL for SQL-managed agent contex
 
 # Local PostgreSQL for agent context
 
-Use the `blue` launcher beside this file to initialize a dedicated PostgreSQL instance under the current user's home. Run as the normal user with PostgreSQL 16 or newer binaries, Python 3.11 or newer, `uv`, and Git on `PATH`. The skill includes `devenv.nix` and `.envrc` for hosts using Nix, devenv, and direnv. Copy both into the deployment directory and run `direnv allow` to supply PostgreSQL and the other runtime tools. Installing this Package Skill also requires Node.js and `npx`.
+Use the `blue` launcher beside this file to initialize a dedicated PostgreSQL instance under the current user's home. Run as the normal user with PostgreSQL 16 or newer binaries, Python 3.11 or newer, `uv`, and Git on `PATH`. The skill includes `devenv.nix`, `devenv.lock`, and `.envrc` for hosts using Nix, devenv, and direnv. Copy these files into the deployment directory and run `direnv allow` to supply PostgreSQL and the other runtime tools. Installing this Package Skill also requires Node.js and `npx`.
 
 Copy the launcher into the chosen deployment directory and create `colors.yml` there. Resolve the source `blue` path relative to this skill directory, not the shell's working directory.
 
