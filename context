@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+set -euo pipefail
+exec uv run --script "$(dirname "$(realpath "$0")")/skills/sql-context/scripts/context.py" "$@"

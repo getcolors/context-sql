@@ -2,7 +2,7 @@
 # Disposable Unix-socket-only PostgreSQL cluster. Never touches an existing DB.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-for tool in python3 initdb pg_ctl createdb psql; do
+for tool in python3 initdb pg_ctl createdb psql uv; do
   command -v "$tool" >/dev/null || { echo "Missing tool: $tool" >&2; exit 1; }
 done
 python3 -m unittest discover -s tests -p 'test_*.py' -v
@@ -21,12 +21,14 @@ createdb "$PGDATABASE"
 psql -X -v ON_ERROR_STOP=1 -f sql/001_schema.sql >/dev/null
 psql -X -v ON_ERROR_STOP=1 -f sql/002_roles.sql >/dev/null
 psql -X -v ON_ERROR_STOP=1 -f sql/003_acquisition.sql >/dev/null
+psql -X -v ON_ERROR_STOP=1 -f sql/004_context_runtime.sql >/dev/null
 psql -X -v ON_ERROR_STOP=1 -f data/skills.sql >/dev/null
 # Re-import must succeed without mutating historical rows.
 psql -X -v ON_ERROR_STOP=1 -f data/skills.sql >/dev/null
 psql -X -v ON_ERROR_STOP=1 -f tests/integrity.sql
 psql -X -v ON_ERROR_STOP=1 -f tests/access.sql
 python3 tests/database_roundtrip.py
+uv run --with 'psycopg[binary]==3.2.10' python tests/context_runtime.py
 # Independent connections exercise session_user without inheriting the owner session.
 context_visible=$(psql -X -U context_test_bob -Atc 'SELECT count(*) FROM working.item')
 [[ "$context_visible" == 0 ]] || { echo 'Cross-login read leaked rows' >&2; exit 1; }

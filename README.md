@@ -2,7 +2,7 @@
 
 Use PostgreSQL as a versioned catalog of Context Skills and as a separate store for an agent's working notes. The agent queries the catalog, selects relevant evidence, and cites the original source revision and lines. Its notes cannot overwrite published skill knowledge.
 
-The supplied essays describe this approach but do not define a formal protocol. This repository proposes a [specification](docs/spec.md), explains the [research and tradeoffs](docs/research.md), and supplies a tested schema and reproducible import. Open [index.html](index.html) for the detailed single-page explanation.
+The supplied essays describe this approach but do not define a formal protocol. This repository proposes a [specification](docs/spec.md), explains the [research and tradeoffs](docs/research.md), and supplies a local PostgreSQL service, an agent skill, and a reproducible import. Open [index.html](index.html) for the detailed single-page explanation.
 
 ## What is included
 
@@ -11,6 +11,9 @@ The supplied essays describe this approach but do not define a formal protocol. 
 | [sql/001_schema.sql](sql/001_schema.sql) | Source versions, exact file bytes, searchable sections, pin rows, eval fixtures, and separate working memory |
 | [sql/002_roles.sql](sql/002_roles.sql) | Catalog reader and working-memory writer privilege groups |
 | [sql/003_acquisition.sql](sql/003_acquisition.sql) | Immutable acquisition provenance linked to skill versions |
+| [sql/004_context_runtime.sql](sql/004_context_runtime.sql) | Stable project and task keys for resuming working memory |
+| [skills/sql-context/SKILL.md](skills/sql-context/SKILL.md) | Agent workflow and its bounded SQL runner |
+| [scripts/local_db.py](scripts/local_db.py) | Initialize, start, stop, inspect, and back up local PostgreSQL |
 | [sql/queries.sql](sql/queries.sql) | Routing, full-text and literal search, pins, evals, bounded note selection, and expiry cleanup |
 | [data/skills.json](data/skills.json) | Portable snapshot with base64 source bytes and derived records |
 | [data/skills.sql](data/skills.sql) | Transactional, repeatable seed for PostgreSQL |
@@ -22,7 +25,48 @@ The snapshot contains **14 skills, 80 files, 755 sections, 179 pin rows, and 110
 
 The original files remain authoritative in `getcolors/skills`. This repository's data is a generated database snapshot, not another maintained implementation of their companion packages. Verification claims are source-reported. Importing the files does not repeat the builds described by those claims.
 
-## Load the database
+## Use locally
+
+Requirements are PostgreSQL 16 or newer, Python 3.11 or newer, and `uv` on a Unix host. Automatic service startup uses systemd. From this checkout:
+
+```sh
+python3 scripts/local_db.py init
+python3 scripts/local_db.py status
+./context catalog
+./context start --project "$PWD" --task investigate-redis \
+  --description 'Investigate Redis authentication failures'
+./context search --query 'NOAUTH' --skill redis-single-node
+```
+
+`init` creates a dedicated cluster outside Git, applies the migrations, loads the verified seed, and creates separate catalog-reader and memory-writer logins. PostgreSQL listens on a private Unix socket with SCRAM authentication and no TCP listener. Connection settings live in `~/.config/context-sql/connections.json` with mode `0600`. Do not print or commit this file.
+
+Use these commands to manage the instance:
+
+```sh
+python3 scripts/local_db.py start
+python3 scripts/local_db.py stop
+python3 scripts/local_db.py backup
+python3 scripts/local_db.py enable
+```
+
+`enable` installs and starts a systemd user service. Starting at boot without a login also requires user lingering. The database and backups persist in `~/.local/share/context-sql/` by default. Use `backup --output /absolute/path/context-sql.dump` to choose a new backup file. Use `status` to inspect the paths and server state. After refreshing `data/skills.sql`, run `python3 scripts/local_db.py import` to load that seed into the local instance.
+
+Install the bootstrap skill and its helper for Codex:
+
+```sh
+mkdir -p "${CODEX_HOME:-$HOME/.codex}/skills"
+cp -R skills/sql-context "${CODEX_HOME:-$HOME/.codex}/skills/"
+```
+
+The skill uses `uv run --script <skill-directory>/scripts/context.py`; `./context` invokes the same helper from this checkout. Its script pins `psycopg[binary]` to `3.2.10`. Once dependencies are cached, catalog retrieval and note restoration need only the running database and this helper. They do not read import staging or a skills source clone.
+
+Keep one stable task key per piece of work and use the same absolute project path after a restart. `start` returns the existing run UUID for that project and key. Use `restore --run UUID` before continuing, and `runs --project "$PWD"` to find earlier tasks. Record decisions, open questions, and selected immutable source references with `note`. Mark completed or replaced notes with `state`. The explicit `expire` command deletes expired runs and their notes across all projects owned by the writer login. See the [skill](skills/sql-context/SKILL.md) for examples.
+
+The runner executes fixed parameterized SQL operations. It does not accept arbitrary SQL. Each response contains at most 50 rows and 65,536 serialized JSON bytes, including the envelope. `--max-bytes` can lower the byte cap to 1,024. Text and file slices accept `--length` up to 8,192; note bodies accept at most 16,384 UTF-8 bytes. The helper reports truncation and continuation offsets. It sets a five-second SQL timeout, a two-second lock timeout, and an eight-second external deadline.
+
+Catalog reads use the reader login. Notes and task restoration use the writer login under row security. Tasks under the same login share access. These role controls do not isolate the Unix account that owns the database and can read its administrative credentials. Notes are external memory; the skill cannot enlarge the model's context window or edit its conversation history.
+
+## Load into another PostgreSQL instance
 
 Requirements are PostgreSQL 16 or newer and `psql`. The integration checks ran on PostgreSQL 18.6. These commands target a new, dedicated database using migration-owner credentials. Role creation requires a role administrator. Choose connection settings through the usual `PGHOST`, `PGPORT`, and `PGUSER` environment variables without committing credentials.
 
@@ -31,6 +75,7 @@ createdb context_sql
 psql -X -v ON_ERROR_STOP=1 -d context_sql -f sql/001_schema.sql
 psql -X -v ON_ERROR_STOP=1 -d context_sql -f sql/002_roles.sql
 psql -X -v ON_ERROR_STOP=1 -d context_sql -f sql/003_acquisition.sql
+psql -X -v ON_ERROR_STOP=1 -d context_sql -f sql/004_context_runtime.sql
 psql -X -v ON_ERROR_STOP=1 -d context_sql -f data/skills.sql
 psql -X -v ON_ERROR_STOP=1 -d context_sql \
   -v symptom='NOAUTH' \
@@ -38,7 +83,7 @@ psql -X -v ON_ERROR_STOP=1 -d context_sql \
   -f sql/queries.sql
 ```
 
-Run the migrations once in order. An existing database with migrations 001 and 002 needs only migration 003 before loading the new seed. The seed may run again without duplicating rows. It explicitly selects the imported versions as current, so loading an older seed intentionally changes the current pointers. Historical version rows remain intact.
+Run the migrations once in order. An existing database with migrations 001 and 002 needs migration 003 before loading the seed and migration 004 before using the task runner. The seed may run again without duplicating rows. It explicitly selects the imported versions as current, so loading an older seed intentionally changes the current pointers. Historical version rows remain intact.
 
 Create application login roles separately. A retrieval login should inherit only `context_reader`. A separately authorized note-writing login can inherit `context_writer`. Neither should own database objects or have role administration, superuser, or `BYPASSRLS` privileges. Working memory policies use the authenticated `session_user`; a shared pool login does not separate application users. The catalog is shared by one trusted workspace.
 
@@ -71,9 +116,9 @@ With PostgreSQL binaries and Python dependencies on `PATH`:
 PATH="$PWD/.venv/bin:$PATH" ./scripts/check.sh
 ```
 
-The script creates and removes its own Unix-socket-only PostgreSQL cluster. Run it as a non-root user. It does not connect to an existing service. It verifies source reconstruction, section coverage, deterministic SQL generation, schema loading, repeat import, foreign keys, immutable revisions, retrieval examples, denied catalog writes, and working-memory isolation. It compares every stored file and acquisition record with the snapshot, checks binary storage, and tests migration from a database with historical imports. Separate local login connections also test visibility and denied role escalation. The temporary cluster uses local trust authentication; this is not a password or network authentication test. These checks use local fixtures; the importer command above separately verifies a real remote download.
+The script creates and removes its own Unix-socket-only PostgreSQL clusters. Run it as a non-root user with `uv` available. It does not connect to the persistent service. It verifies source reconstruction, section coverage, deterministic SQL generation, schema loading, repeat import, foreign keys, immutable revisions, retrieval examples, denied catalog writes, and working-memory isolation. It compares every stored file and acquisition record with the snapshot, checks binary storage, and tests migration from a database with historical imports. Runner tests exercise paging, output limits, deadlines, rollback, and task restoration. Service tests also check SCRAM authentication, lifecycle commands, and backup restoration. Legacy role tests use trust authentication. Network transport remains untested. These checks use local fixtures; the importer command above separately verifies a real remote download.
 
-See [docs/validation.md](docs/validation.md) for the recorded checks. The 110 imported eval cases are fixtures. No model diagnosis benchmark or production gateway security evaluation is claimed. [The specification's coverage table](docs/spec.md#10-implementation-coverage) identifies remaining runtime work, including byte limits, cancellation, query audit, token accounting, and reviewed promotion of new knowledge.
+See [docs/validation.md](docs/validation.md) for the recorded checks. The 110 imported eval cases are fixtures. No model diagnosis benchmark or production gateway security evaluation is claimed. [The specification's coverage table](docs/spec.md#10-implementation-coverage) identifies remaining work, including query audit, model-token accounting, and reviewed promotion of new knowledge.
 
 ## View the page
 

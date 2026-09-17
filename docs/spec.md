@@ -98,6 +98,16 @@ A proposed correction MUST link the relevant source version, the new observation
 
 Nightly analysis may suggest a new view or a revised skill. It MUST NOT overwrite verification claims because a language model found the revision persuasive. Record rejected and superseded proposals so later agents can see why they were not adopted. Do not store credentials, raw authentication tokens, or unnecessary personal data in notes or query logs.
 
+### Local task workflow
+
+The bootstrap `sql-context` skill and its connection helper MUST remain available outside the database. A coding agent uses `start` with a canonical absolute project path and a stable task key, then `restore` with the returned run UUID. Repeating that identity MUST resume the same task while its record exists. Project paths identify tasks; they do not authorize access.
+
+The agent SHOULD save decisions, unresolved questions, next actions, and immutable evidence references before ending a session. The next session SHOULD restore those notes before repeating investigations. It MUST keep prior observations distinct from newly checked facts. Notes MUST NOT contain credentials or become published knowledge without review.
+
+The local runner exposes fixed parameterized operations rather than accepting SQL text from the agent. Catalog reads use a dedicated reader connection. Working-memory operations use a separate writer connection; restoration uses a read-only transaction under that identity. The runner MUST enforce output limits on serialized results and expose how to continue after truncation.
+
+A restart acceptance test MUST use a fresh agent session with the same project and task identifiers. That session must recover saved decisions and resolve their immutable citations through PostgreSQL alone. This test demonstrates persistence and retrieval, not improved diagnosis or reduced model-token use. The skill does not enlarge the model's context window or edit its conversation history.
+
 ## 8. Version decay and verification
 
 Claims hold within the documented verification conditions. A new application pin means compatibility is unknown until the skill's retest procedure supplies evidence. Time since import is not a correctness score.
@@ -120,7 +130,7 @@ No database integrity test establishes diagnosis quality. No retrieval hit prove
 
 ## 10. Implementation coverage
 
-The repository demonstrates storage and SQL access patterns. Its migration is a subset of the proposed service contract. This table prevents a requirement above from being mistaken for a completed runtime.
+The repository implements a local PostgreSQL service, fixed SQL operations, and a bootstrap agent skill. The local runtime covers a subset of the proposed service contract. This table distinguishes it from the remaining production work.
 
 | Capability | Reference implementation | Remaining work |
 | --- | --- | --- |
@@ -130,10 +140,12 @@ The repository demonstrates storage and SQL access patterns. Its migration is a 
 | Pin evidence | `catalog.pin_row` preserves table cells and source locations. | Extraction status is not a dedicated field. Prose pins remain in sections and require interpretation. |
 | Imported evals | `catalog.eval_case` preserves prompts, assertions, expected output, and raw JSON. | Run model-based routing and diagnosis evaluation. Imported cases alone are not evaluation results. |
 | Catalog changes | Version tables reject updates and deletes. A current-version pointer selects active content. | Review and promotion are not implemented. Immutability does not restrict a database owner who can alter the schema. |
-| Task memory | `working.run` and `working.item` store task text, notes, priority, state, and optional immutable section references. | Dedicated selection order, selection reasons, token budgets, and review outcomes have no dedicated fields. |
+| Task memory | `working.run` and `working.item` store task text, notes, priority, state, and optional immutable section references. Migration 004 adds stable project and task keys for resumption. | Dedicated selection order, selection reasons, token budgets, and review outcomes have no dedicated fields. |
 | Working-memory access | Forced RLS policies use `session_user`. The catalog is shared within the workspace. | A pooled service must map authenticated users to distinct database identities or introduce a separately tested authorization design. |
-| SQL examples | Queries demonstrate discovery, search, citations, and joins. | No authenticated arbitrary-SQL gateway, parsed-query filter, enforced output budget, or external cancellation service is provided. |
+| Bounded SQL runner | The `sql-context` helper executes parameterized catalog, search, section, and working-memory operations. It bounds rows and serialized JSON bytes, reports truncation, uses SQL timeouts and an external deadline, and closes transactions on exit. | No arbitrary-SQL endpoint, per-task call budget, or model-token accounting is provided. |
+| Local instance | `scripts/local_db.py` initializes persistent PostgreSQL outside Git, applies migrations and seed data, configures SCRAM over a private Unix socket, and provides lifecycle and backup commands. Reader and writer logins are distinct. | Off-machine backups, monitoring, and multi-user service authentication remain deployment work. |
+| Bootstrap skill | `skills/sql-context/` supplies instructions and the connection helper outside the database. A stable project path and task key restore notes across sessions. | Automatic model-context compaction and conversation-history editing are outside this skill. |
 | Query tracing | The specification defines query-record requirements. | No query-audit table or audit ingestion service is implemented. |
 | Verification | Source evidence is labeled `source_reported`. | No fresh infrastructure verification, automatic version compatibility proof, or claimed LLM benchmark. |
 
-`tests/access.sql` changes session authorization in a disposable superuser test session to exercise login-based policy semantics. `scripts/check.sh` also opens independent restricted-login connections over the disposable cluster's trusted Unix socket. These checks cover per-login visibility, denied catalog writes, and denied role escalation. They do not prove password authentication, network transport, or connection-pool behavior. A deployed service must test those separately.
+`tests/access.sql` changes session authorization in a disposable superuser test session to exercise login-based policy semantics. `scripts/check.sh` also opens independent restricted-login connections over the disposable cluster's trusted Unix socket. These checks cover per-login visibility, denied catalog writes, and denied role escalation. `tests/test_local_db.py` also exercises the managed instance over its private Unix socket with SCRAM authentication. Network transport and connection-pool behavior remain separate deployment checks. Database roles do not isolate the Unix account that owns the cluster and can access its administrative state.
