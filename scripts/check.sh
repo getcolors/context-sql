@@ -16,20 +16,24 @@ initdb -D "$context_test_dir/pg" -A trust --no-locale -E UTF8 >"$context_test_di
 pg_ctl -D "$context_test_dir/pg" -l "$context_test_dir/server.log" \
   -o "-k $context_test_dir -p 55439 -h ''" -w start >/dev/null
 export PGHOST="$context_test_dir" PGPORT=55439 PGDATABASE=context_sql_test
-unset PGUSER PGPASSWORD PGSERVICE PGSERVICEFILE PGOPTIONS
+unset PGUSER PGPASSWORD PGSERVICE PGSERVICEFILE PGOPTIONS PGHOSTADDR
 createdb "$PGDATABASE"
 psql -X -v ON_ERROR_STOP=1 -f sql/001_schema.sql >/dev/null
 psql -X -v ON_ERROR_STOP=1 -f sql/002_roles.sql >/dev/null
+psql -X -v ON_ERROR_STOP=1 -f sql/003_acquisition.sql >/dev/null
 psql -X -v ON_ERROR_STOP=1 -f data/skills.sql >/dev/null
 # Re-import must succeed without mutating historical rows.
 psql -X -v ON_ERROR_STOP=1 -f data/skills.sql >/dev/null
 psql -X -v ON_ERROR_STOP=1 -f tests/integrity.sql
 psql -X -v ON_ERROR_STOP=1 -f tests/access.sql
+python3 tests/database_roundtrip.py
 # Independent connections exercise session_user without inheriting the owner session.
 context_visible=$(psql -X -U context_test_bob -Atc 'SELECT count(*) FROM working.item')
 [[ "$context_visible" == 0 ]] || { echo 'Cross-login read leaked rows' >&2; exit 1; }
 context_owner=$(psql -X -U context_test_alice -Atc 'SELECT count(*) FROM working.item')
 [[ "$context_owner" == 1 ]] || { echo 'Owner cannot read its note' >&2; exit 1; }
+context_acquisitions=$(psql -X -U context_test_reader -Atc 'SELECT count(*) FROM catalog.acquisition a JOIN catalog.skill_acquisition s USING (acquisition_id)')
+[[ "$context_acquisitions" == 14 ]] || { echo 'Reader cannot inspect acquisition provenance' >&2; exit 1; }
 if psql -X -U context_test_reader -v ON_ERROR_STOP=1 -c "UPDATE catalog.skill SET kind='generic'" >"$context_test_dir/denied.txt" 2>&1; then
   echo 'Reader unexpectedly modified catalog' >&2; exit 1
 fi

@@ -36,6 +36,10 @@ GRANT context_reader TO context_test_reader;
 SET SESSION AUTHORIZATION context_test_reader;
 DO $$ BEGIN
   BEGIN
+    DELETE FROM catalog.acquisition;
+    RAISE EXCEPTION 'reader acquisition write unexpectedly allowed';
+  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+  BEGIN
     INSERT INTO working.run(run_id,task) VALUES ('33333333-3333-3333-3333-333333333333','reader write');
     RAISE EXCEPTION 'reader write unexpectedly allowed';
   EXCEPTION WHEN insufficient_privilege THEN NULL; END;

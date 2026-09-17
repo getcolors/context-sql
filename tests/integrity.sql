@@ -18,6 +18,18 @@ BEGIN
    IF SQLERRM NOT LIKE 'Catalog version material is immutable%' THEN RAISE; END IF;
  END;
  BEGIN
+   UPDATE catalog.acquisition SET acquired_at=now();
+   RAISE EXCEPTION 'Acquisition mutation unexpectedly allowed';
+ EXCEPTION WHEN raise_exception THEN
+   IF SQLERRM NOT LIKE 'Catalog version material is immutable%' THEN RAISE; END IF;
+ END;
+ BEGIN
+   DELETE FROM catalog.skill_acquisition;
+   RAISE EXCEPTION 'Acquisition link deletion unexpectedly allowed';
+ EXCEPTION WHEN raise_exception THEN
+   IF SQLERRM NOT LIKE 'Catalog version material is immutable%' THEN RAISE; END IF;
+ END;
+ BEGIN
    INSERT INTO catalog.section VALUES ('redis-single-node',repeat('0',64),'SKILL.md',0,'prose','bad','{}',1,1,'bad',DEFAULT);
    RAISE EXCEPTION 'Cross-version foreign key accepted';
  EXCEPTION WHEN foreign_key_violation THEN NULL;

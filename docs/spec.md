@@ -12,13 +12,17 @@ The initial deployment boundary is one trusted workspace. A database credential 
 
 ## 2. Source and version contract
 
-The importer MUST preserve each allowed source file's content, relative path, content digest, source repository, source commit, and skill association. It MUST reject path traversal and MUST NOT follow a symlink outside the selected skill root. A file that cannot be decoded without loss needs a binary representation or an explicit rejection. Silent replacement characters are not acceptable.
+Skills MUST be acquired through an `npx skills` invocation pinned to an exact CLI version and an identified upstream commit. The importer MUST select skills explicitly and download them into an isolated temporary project. A sibling checkout, working-tree edits, and an unpinned branch MUST NOT supply the imported payload.
 
-A skill version MUST identify the exact imported content. The importer MUST distinguish a clean committed snapshot from a dirty working tree. A commit SHA alone does not identify uncommitted edits. A content digest identifies those bytes, but it must not imply that they exist at a GitHub commit URL.
+The importer MUST persist the complete selected skill payload byte-for-byte in PostgreSQL. This includes `SKILL.md`, references, evals, scripts, binary assets, and every other regular file committed beneath each selected skill directory. Each file MUST retain its relative path, SHA-256 digest, source repository, source commit, and skill association. Text decoding MUST NOT alter stored bytes. Searchable text may be derived only when decoding succeeds without loss.
 
-The reference importer reads Git objects at the requested commit and ignores uncommitted and untracked files. The captured checkout was clean. This choice makes its commit citations exact, but users must commit an intended source change before importing it.
+The importer MUST independently fetch the identified upstream commit and compare its file inventory and bytes with the downloaded payload before producing output. Missing, transformed, extra, or unsafe files MUST fail verification. Path traversal, symlinks within selected payloads, and unsupported Git entry types MUST be rejected. Before invoking the installer, the importer also checks unselected repository entries that skill discovery may read. It permits an unselected symlink only when it points directly to a regular tracked file inside the repository. Git objects are verification evidence; the importer MUST NOT use them to fill gaps in the installer output. A failed acquisition or verification MUST leave existing output and current-version pointers unchanged.
 
-Import time records when the catalog saw content. It is not a build-verification date. The importer MUST NOT fill a missing verification date with the current date. A rerun against identical input MUST produce the same logical catalog without duplicate versions. A changed input MUST produce a new version and preserve earlier evidence.
+Acquisition provenance MUST record the source URL, resolved commit, exact CLI package version, invocation arguments, selected skills, acquisition time, and verified file inventory with hashes. Temporary filesystem paths MUST NOT become retrieval locations or persistent dependencies. Once loaded, the database MUST supply the complete original payload, searchable projections, and citations without staging files, an installed skill directory, or a local source clone.
+
+The reference importer uses `npx --yes skills@1.6.0 add` with a commit-qualified GitHub URL, explicit skill names, and `--agent codex --copy --yes`. It verifies the downloaded files against an independent Git fetch of the same commit. It stores scripts as bytes and never executes them.
+
+A skill version MUST identify the exact imported content and parser version. Acquisition time records when the download completed verification. It is not a build-verification date. The importer MUST NOT fill a missing verification date with that timestamp. A rerun against identical content MUST preserve version identity without duplicate versions. A changed payload or parser MUST produce a new version and preserve earlier evidence. Acquisition events may differ without changing the content version. The reference `--check` command downloads and verifies the source again and compares content and deterministic SQL while ignoring only the new acquisition timestamp and identifier. It does not overwrite the recorded acquisition provenance.
 
 Section projections MUST retain their source file and line interval. Heading detection MUST respect fenced code blocks. The complete source remains available so a consumer can recover surrounding qualifications. The parser MUST identify its own version so projections can be regenerated after a parsing fix.
 
@@ -33,6 +37,7 @@ The schema SHOULD separate these responsibilities. Physical table names live in 
 | Skill identity | Stable name, kind, source location, current-version pointer |
 | Skill version | Content digest, source revision, routing description, provenance metadata |
 | Source file | Relative path, raw content, digest, media type |
+| Acquisition | Source URL, resolved commit, CLI version and arguments, selected skills, timestamp, verified inventory |
 | Searchable section | Version, file, heading, line bounds, body, search representation |
 | Pin | Component or source label, raw version evidence, source location, extraction status |
 | Evaluation case | Version, user prompt, expected behavior, assertions, source payload |
@@ -103,7 +108,7 @@ Queries SHOULD expose the status and the pinned conditions with the retrieved cl
 
 ## 9. Acceptance and evaluation
 
-Structural acceptance MUST prove that all fourteen directories appear, that the generic skill is classified correctly, and that each captured file can be reconstructed with its original digest. Reimport MUST be idempotent. A changed source fixture MUST create a distinguishable version. Malformed metadata and unsafe paths MUST fail with useful errors.
+Structural acceptance MUST prove that all fourteen selected skills appear, that the generic skill is classified correctly, and that every downloaded file matches the upstream inventory and bytes. Each captured file MUST be reconstructable from PostgreSQL with its original digest after staging is removed. Reimport MUST preserve content versions. A changed source fixture MUST create a distinguishable version. Tests MUST reject an omitted file, transformed bytes, an extra file, unsafe paths, symlinks, unsupported Git entries, and malformed metadata. Acquisition or verification failure MUST leave existing output and current-version pointers unchanged.
 
 Database acceptance MUST run migrations and seed data in real PostgreSQL. It MUST exercise retrieval joins, foreign-key failures, text search, empty searches, and bounded output. Test the restricted login rather than only `SET ROLE` from an owner session. Confirm denied catalog writes, denied role escalation, and the absence of unintended server-file or network functions. If working-memory writes exist, test that those writes cannot alter the catalog.
 
@@ -120,7 +125,8 @@ The repository demonstrates storage and SQL access patterns. Its migration is a 
 | Capability | Reference implementation | Remaining work |
 | --- | --- | --- |
 | Skill identities and versions | `catalog.skill` and `catalog.skill_version` distinguish kind, content version, source revision, and importer version. | Add a documented policy for retiring published versions. |
-| Original files and citations | `catalog.source_file` stores bytes and hashes. `catalog.section` records headings and line bounds. The current-section view builds commit-based citations. | Add explicit media types and ingestion timestamps if a service needs them. |
+| Original files and citations | `catalog.source_file` stores all verified payload bytes and hashes, including binary files. Markdown files supply section headings and line bounds. The current-section view builds commit-based citations. | Add explicit media types and database ingestion timestamps if a service needs them. |
+| Skill acquisition | Pinned `skills@1.6.0` downloads are verified against an independent upstream Git fetch. `catalog.acquisition` stores immutable acquisition provenance; `catalog.skill_acquisition` links it to content versions. Migration 003 adds these tables to existing databases. | Review future CLI versions before changing the pin. |
 | Pin evidence | `catalog.pin_row` preserves table cells and source locations. | Extraction status is not a dedicated field. Prose pins remain in sections and require interpretation. |
 | Imported evals | `catalog.eval_case` preserves prompts, assertions, expected output, and raw JSON. | Run model-based routing and diagnosis evaluation. Imported cases alone are not evaluation results. |
 | Catalog changes | Version tables reject updates and deletes. A current-version pointer selects active content. | Review and promotion are not implemented. Immutability does not restrict a database owner who can alter the schema. |
