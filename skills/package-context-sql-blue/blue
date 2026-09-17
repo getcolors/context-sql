@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Managed by scripts/pin.py after the package commit is pushed.
-package_revision=''
+package_revision='75cc4ddf99fc79ecd2fc2729680efcab4bd22af0'
 blue_revision='290f313ead5ca162875c33a049c880da017eae09'
 package_url='https://github.com/getcolors/context-sql.git'
 blue_url='https://github.com/getcolors/blue.git'
