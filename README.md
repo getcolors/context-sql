@@ -11,7 +11,8 @@ The supplied essays describe this approach but do not define a formal protocol. 
 | [sql/001_schema.sql](sql/001_schema.sql) | Source versions, exact file bytes, searchable sections, pin rows, eval fixtures, and separate working memory |
 | [sql/002_roles.sql](sql/002_roles.sql) | Catalog reader and working-memory writer privilege groups |
 | [sql/003_acquisition.sql](sql/003_acquisition.sql) | Immutable acquisition provenance linked to skill versions |
-| [sql/004_context_runtime.sql](sql/004_context_runtime.sql) | Stable project and task keys for resuming working memory |
+| [sql/004_context_runtime.sql](sql/004_context_runtime.sql) | Original project-path and task keys for working memory |
+| [sql/005_portable_projects.sql](sql/005_portable_projects.sql) | Portable project IDs, separate local paths, and preserved legacy task identities |
 | [skills/sql-context/SKILL.md](skills/sql-context/SKILL.md) | Agent workflow and its bounded SQL runner |
 | [scripts/local_db.py](scripts/local_db.py) | Initialize, start, stop, inspect, and back up local PostgreSQL |
 | [sql/queries.sql](sql/queries.sql) | Routing, full-text and literal search, pins, evals, bounded note selection, and expiry cleanup |
@@ -33,7 +34,7 @@ Requirements are PostgreSQL 16 or newer, Python 3.11 or newer, and `uv` on a Uni
 python3 scripts/local_db.py init
 python3 scripts/local_db.py status
 ./context catalog
-./context start --project "$PWD" --task investigate-redis \
+./context start --project getcolors/redis --local-path "$PWD" --task investigate-redis \
   --description 'Investigate Redis authentication failures'
 ./context search --query 'NOAUTH' --skill redis-single-node
 ```
@@ -60,7 +61,17 @@ cp -R skills/sql-context "${CODEX_HOME:-$HOME/.codex}/skills/"
 
 The skill uses `uv run --script <skill-directory>/scripts/context.py`; `./context` invokes the same helper from this checkout. Its script pins `psycopg[binary]` to `3.2.10`. Once dependencies are cached, catalog retrieval and note restoration need only the running database and this helper. They do not read import staging or a skills source clone.
 
-Keep one stable task key per piece of work and use the same absolute project path after a restart. `start` returns the existing run UUID for that project and key. Use `restore --run UUID` before continuing, and `runs --project "$PWD"` to find earlier tasks. Record decisions, open questions, and selected immutable source references with `note`. Mark completed or replaced notes with `state`. The explicit `expire` command deletes expired runs and their notes across all projects owned by the writer login. See the [skill](skills/sql-context/SKILL.md) for examples.
+Use a stable project ID such as `getcolors/redis` and one task key per piece of work. `start` returns the existing run UUID for that project and task under the same database login, even when the checkout moves. Project IDs contain at least two slash-separated components, each matching `[a-z0-9][a-z0-9._-]*`, and at most 255 characters overall. Use `--local-path "$PWD"` to record the current checkout as separate metadata. The helper resolves this path to an absolute path and keeps the last explicitly supplied value. Omitting it preserves the previous value. A project ID does not synchronize separate databases.
+
+Use `restore --run UUID` before continuing, and `runs --project getcolors/redis` to find earlier tasks. Record decisions, open questions, and selected immutable source references with `note`. Mark completed or replaced notes with `state`. The explicit `expire` command deletes expired runs and their notes across all projects owned by the writer login. See the [skill](skills/sql-context/SKILL.md) for examples.
+
+After upgrading an existing local instance, run `python3 scripts/local_db.py init` to apply new migrations. Earlier tasks keep their UUIDs and notes. List tasks that still use legacy identities with `./context runs --legacy`, then assign a portable project ID explicitly:
+
+```sh
+./context adopt --run UUID --project getcolors/redis --local-path "$PWD"
+```
+
+`adopt` accepts an unexpired legacy run with a task key and preserves its UUID, notes, and legacy project key. It refuses a project/task combination already assigned to another run. The migration does not infer repository identity from a directory name.
 
 The runner executes fixed parameterized SQL operations. It does not accept arbitrary SQL. Each response contains at most 50 rows and 65,536 serialized JSON bytes, including the envelope. `--max-bytes` can lower the byte cap to 1,024. Text and file slices accept `--length` up to 8,192; note bodies accept at most 16,384 UTF-8 bytes. The helper reports truncation and continuation offsets. It sets a five-second SQL timeout, a two-second lock timeout, and an eight-second external deadline.
 
@@ -76,6 +87,7 @@ psql -X -v ON_ERROR_STOP=1 -d context_sql -f sql/001_schema.sql
 psql -X -v ON_ERROR_STOP=1 -d context_sql -f sql/002_roles.sql
 psql -X -v ON_ERROR_STOP=1 -d context_sql -f sql/003_acquisition.sql
 psql -X -v ON_ERROR_STOP=1 -d context_sql -f sql/004_context_runtime.sql
+psql -X -v ON_ERROR_STOP=1 -d context_sql -f sql/005_portable_projects.sql
 psql -X -v ON_ERROR_STOP=1 -d context_sql -f data/skills.sql
 psql -X -v ON_ERROR_STOP=1 -d context_sql \
   -v symptom='NOAUTH' \
@@ -83,7 +95,7 @@ psql -X -v ON_ERROR_STOP=1 -d context_sql \
   -f sql/queries.sql
 ```
 
-Run the migrations once in order. An existing database with migrations 001 and 002 needs migration 003 before loading the seed and migration 004 before using the task runner. The seed may run again without duplicating rows. It explicitly selects the imported versions as current, so loading an older seed intentionally changes the current pointers. Historical version rows remain intact.
+Run the migrations once in order. Migration 005 requires an owner with `BYPASSRLS` or superuser access to backfill all historical owners; it fails rather than skip hidden rows. An existing database with migrations 001 and 002 needs migration 003 before loading the seed and migrations 004 and 005 before using the task runner. The seed may run again without duplicating rows. It explicitly selects the imported versions as current, so loading an older seed intentionally changes the current pointers. Historical version rows remain intact.
 
 Create application login roles separately. A retrieval login should inherit only `context_reader`. A separately authorized note-writing login can inherit `context_writer`. Neither should own database objects or have role administration, superuser, or `BYPASSRLS` privileges. Working memory policies use the authenticated `session_user`; a shared pool login does not separate application users. The catalog is shared by one trusted workspace.
 

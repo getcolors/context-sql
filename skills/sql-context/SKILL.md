@@ -15,16 +15,25 @@ Replace `<skill-directory>` with the absolute directory containing this file. Th
 
 ## Start or resume work
 
-Choose a short, stable task key describing the current work. Use the canonical absolute project directory and reuse both identifiers in later sessions.
+Choose a stable project ID such as `getcolors/redis` and a short task key describing the current work. Reuse both identifiers in later sessions. Project IDs have at least two slash-separated components, each matching `[a-z0-9][a-z0-9._-]*`, with at most 255 characters overall. Pass the checkout directory separately with `--local-path` when useful.
 
 ```sh
 uv run --script <skill-directory>/scripts/context.py start \
-  --project /absolute/project/path --task redis-auth-investigation \
+  --project getcolors/redis --local-path "$PWD" --task redis-auth-investigation \
   --description 'Investigate Redis authentication failures'
 uv run --script <skill-directory>/scripts/context.py restore --run <returned-uuid>
 ```
 
-`start` creates or resumes the task, returns its run UUID, and renews its seven-day expiry. It preserves the original description. To find a previous task, use `runs --project /absolute/project/path`. Restore its notes before repeating investigations. Treat saved observations as notes from an earlier agent; check whether the repository and user instructions have changed.
+`start` creates or resumes the task, returns its run UUID, and renews its seven-day expiry. It preserves the original description. The same project ID and task key resume the same run across checkout paths under the same database login. `--local-path` records the last explicitly supplied absolute path; omitting it preserves the previous value. Project IDs do not synchronize separate databases. To find a previous task, use `runs --project getcolors/redis`. Restore its notes before repeating investigations. Treat saved observations as notes from an earlier agent; check whether the repository and user instructions have changed.
+
+List tasks from the earlier path-based format with `runs --legacy`. Assign one to its project explicitly:
+
+```sh
+uv run --script <skill-directory>/scripts/context.py adopt \
+  --run <uuid> --project getcolors/redis --local-path "$PWD"
+```
+
+`adopt` accepts an unexpired legacy run with a task key and preserves its UUID, notes, and legacy project key. It refuses a project/task identity that belongs to another run. Choose the project ID from the task and repository context; do not infer it from the old directory basename alone.
 
 ## Find and cite evidence
 
@@ -67,4 +76,4 @@ Provide all four source-reference fields together or omit them together. Allowed
 
 Before ending a session, save a checkpoint with the current decision, what remains unresolved, and the next useful action. Preserve citations on notes that depend on catalog evidence. Retire obsolete notes with `state --run <uuid> --item <id> --state done` or `--state superseded`. Use `restore --run <uuid>` to check what the next session will receive. The explicit `expire` command deletes expired runs and their notes across all projects owned by the writer login.
 
-The database stores external memory. This skill cannot change the model's context window or remove prior conversation messages. Tasks under the same database login share access, even when their project paths differ.
+The database stores external memory. This skill cannot change the model's context window or remove prior conversation messages. Tasks under the same database login share access, even when their project IDs differ.

@@ -57,8 +57,21 @@ class ArgumentTests(unittest.TestCase):
                                 text=True, capture_output=True, timeout=10,
                                 env={**os.environ, 'CONTEXT_SQL_CONFIG': '/absent/context-config.json'})
         self.assertEqual(result.returncode, 0, result.stderr)
-        for command in ['catalog', 'start', 'restore', 'note', 'section', 'file']:
+        for command in ['catalog', 'start', 'restore', 'note', 'section', 'file', 'adopt']:
             self.assertIn(command, result.stdout)
+
+    def test_portable_project_id_validation(self):
+        for project in ['getcolors/rabbitmq', 'org/team/repo.v2', 'a0/b_c-d']:
+            with self.subTest(project=project):
+                args = runner.parser().parse_args(['start', '--project', project, '--task', 'task'])
+                self.assertEqual(runner.validate(args)['project'], project)
+        for project in ['/absolute/path', './relative', '../relative', 'repo', 'Org/Repo',
+                        'org//repo', 'org/../repo', 'https://github.com/org/repo',
+                        'org/repo ', 'org/repo\n', 'org/' + 'a' * 252]:
+            with self.subTest(project=project):
+                args = runner.parser().parse_args(['start', '--project', project, '--task', 'task'])
+                with self.assertRaises(ValueError):
+                    runner.validate(args)
 
     def test_invalid_bounds_fail_without_database_access(self):
         cases = [

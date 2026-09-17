@@ -8,6 +8,7 @@ import argparse
 import json
 import multiprocessing
 import os
+import re
 from pathlib import Path
 import stat
 import sys
@@ -16,7 +17,7 @@ import uuid
 
 DEADLINE_SECONDS = 8
 MAX_BYTES = 65536
-WRITE_OPERATIONS = {'start', 'note', 'state', 'expire'}
+WRITE_OPERATIONS = {'start', 'adopt', 'note', 'state', 'expire'}
 MEMORY_OPERATIONS = WRITE_OPERATIONS | {'runs', 'restore', 'item'}
 KINDS = ('observation', 'hypothesis', 'decision', 'todo', 'tool_result', 'summary')
 
@@ -34,7 +35,7 @@ def parser():
     cli = argparse.ArgumentParser(description=__doc__)
     commands = cli.add_subparsers(dest='operation', required=True)
     for operation in ('catalog', 'search', 'sections', 'section', 'file', 'start',
-                      'runs', 'note', 'restore', 'item', 'state', 'expire'):
+                      'runs', 'adopt', 'note', 'restore', 'item', 'state', 'expire'):
         command = commands.add_parser(operation)
         command.add_argument('--limit', type=bounded_int(1, 50), default=20)
         command.add_argument('--offset', type=bounded_int(0, 1000000), default=0)
@@ -54,12 +55,17 @@ def parser():
             command.add_argument('--ordinal', type=bounded_int(0, 1000000), required=True)
         if operation == 'file':
             command.add_argument('--byte-offset', type=bounded_int(0, 1000000000), default=0)
-        if operation in ('start', 'runs'):
+        if operation in ('start', 'adopt'):
             command.add_argument('--project', required=True)
+            command.add_argument('--local-path')
+        if operation == 'runs':
+            identity = command.add_mutually_exclusive_group(required=True)
+            identity.add_argument('--project')
+            identity.add_argument('--legacy', action='store_true')
         if operation == 'start':
             command.add_argument('--task', required=True)
             command.add_argument('--description')
-        if operation in ('note', 'restore', 'item', 'state'):
+        if operation in ('note', 'restore', 'item', 'state', 'adopt'):
             command.add_argument('--run', type=uuid.UUID, required=True)
         if operation == 'note':
             command.add_argument('--kind', choices=KINDS, required=True)
@@ -102,10 +108,15 @@ def validate(args):
     for key, value in values.items():
         if isinstance(value, str) and ('\0' in value or len(value.encode('utf-8')) > 16384):
             raise ValueError(f'Invalid or oversized {key}')
-    if args.operation in ('start', 'runs'):
-        values['project'] = str(Path(args.project).expanduser().resolve())
-        if len(values['project']) > 4096:
-            raise ValueError('Project path is too long')
+    if args.operation in ('start', 'runs', 'adopt') and args.project is not None:
+        if len(args.project) > 255 or not re.fullmatch(
+                r'[a-z0-9][a-z0-9._-]*(/[a-z0-9][a-z0-9._-]*)+', args.project):
+            raise ValueError('Project must be a lowercase namespace/name ID, at most 255 characters')
+    if args.operation in ('start', 'adopt'):
+        values['local_path'] = (str(Path(args.local_path).expanduser().resolve())
+                                if args.local_path is not None else None)
+        if values['local_path'] is not None and len(values['local_path']) > 4096:
+            raise ValueError('Local path is too long')
     if args.operation == 'start':
         if not 1 <= len(args.task.strip()) <= 128:
             raise ValueError('Task key must contain 1 to 128 characters')
@@ -176,14 +187,22 @@ def query_for(operation):
                 v.git_commit,v.evidence_status
             FROM catalog.source_file f JOIN catalog.skill_version v USING (skill_slug,version_id)
             WHERE f.skill_slug=%(skill)s AND f.version_id=%(version)s AND f.path=%(path)s""",
-        'start': """INSERT INTO working.run (run_id,task,project_key,task_key)
-            VALUES (%(new_run)s,%(description)s,%(project)s,%(task)s)
-            ON CONFLICT (owner_name,project_key,task_key)
-              DO UPDATE SET expires_at=greatest(working.run.expires_at,now()+interval '7 days')
-            RETURNING run_id,project_key,task_key,task,created_at,expires_at""",
-        'runs': """SELECT run_id,project_key,task_key,left(task,512) AS task,created_at,expires_at
-            FROM working.run WHERE project_key=%(project)s AND expires_at>now()
+        'start': """INSERT INTO working.run (run_id,task,project_id,task_key,local_path)
+            VALUES (%(new_run)s,%(description)s,%(project)s,%(task)s,%(local_path)s)
+            ON CONFLICT (owner_name,project_id,task_key)
+              DO UPDATE SET expires_at=greatest(working.run.expires_at,now()+interval '7 days'),
+                local_path=coalesce(excluded.local_path,working.run.local_path)
+            RETURNING run_id,project_id,local_path,task_key,task,created_at,expires_at""",
+        'runs': """SELECT run_id,project_id,local_path,project_key,task_key,
+                left(task,512) AS task,created_at,expires_at
+            FROM working.run WHERE expires_at>now() AND
+              ((%(legacy)s AND project_id IS NULL) OR project_id=%(project)s)
             ORDER BY created_at DESC,run_id LIMIT %(fetch_limit)s OFFSET %(offset)s""",
+        'adopt': """UPDATE working.run SET project_id=%(project)s,
+                local_path=coalesce(%(local_path)s,local_path)
+            WHERE run_id=%(run)s AND project_id IS NULL AND task_key IS NOT NULL
+                AND expires_at>now()
+            RETURNING run_id,project_id,local_path,project_key,task_key,task,created_at,expires_at""",
         'note': """INSERT INTO working.item
               (run_id,kind,body,priority,source_skill,source_version,source_path,source_section)
             VALUES (%(run)s,%(kind)s,%(body)s,%(priority)s,%(source_skill)s,%(source_version)s,%(source_path)s,%(source_section)s)
@@ -246,12 +265,14 @@ def run_operation(args):
         if args.operation not in MEMORY_OPERATIONS and connection.execute(
                 "SELECT pg_has_role(session_user,'context_writer','MEMBER') AS writer").fetchone()['writer']:
             raise ValueError('Catalog reader must not inherit context_writer')
-        if args.operation in ('note', 'restore', 'item', 'state'):
+        if args.operation in ('note', 'restore', 'item', 'state', 'adopt'):
             run = connection.execute("""SELECT run_id FROM working.run
                 WHERE run_id=%s AND expires_at>now()""", (args.run,)).fetchone()
             if run is None:
                 raise ValueError('Run not found, expired, or not owned by this login; use start to resume')
         rows = connection.execute(query_for(args.operation), values).fetchall()
+        if args.operation == 'adopt' and not rows:
+            raise ValueError('Adoption requires an unassigned run with an existing task key')
         if args.operation in ('section', 'file', 'item', 'state') and not rows:
             raise ValueError('Requested record was not found')
         for row in rows:

@@ -22,12 +22,14 @@ psql -X -v ON_ERROR_STOP=1 -f sql/001_schema.sql >/dev/null
 psql -X -v ON_ERROR_STOP=1 -f sql/002_roles.sql >/dev/null
 psql -X -v ON_ERROR_STOP=1 -f sql/003_acquisition.sql >/dev/null
 psql -X -v ON_ERROR_STOP=1 -f sql/004_context_runtime.sql >/dev/null
+psql -X -v ON_ERROR_STOP=1 -f sql/005_portable_projects.sql >/dev/null
 psql -X -v ON_ERROR_STOP=1 -f data/skills.sql >/dev/null
 # Re-import must succeed without mutating historical rows.
 psql -X -v ON_ERROR_STOP=1 -f data/skills.sql >/dev/null
 psql -X -v ON_ERROR_STOP=1 -f tests/integrity.sql
 psql -X -v ON_ERROR_STOP=1 -f tests/access.sql
 python3 tests/database_roundtrip.py
+python3 tests/portable_upgrade.py
 uv run --with 'psycopg[binary]==3.2.10' python tests/context_runtime.py
 # Independent connections exercise session_user without inheriting the owner session.
 context_visible=$(psql -X -U context_test_bob -Atc 'SELECT count(*) FROM working.item')

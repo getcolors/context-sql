@@ -8,6 +8,7 @@ import sys
 import tempfile
 import time
 import unittest
+import uuid
 
 import psycopg
 
@@ -32,7 +33,8 @@ class RuntimeTests(unittest.TestCase):
         cls.config.write_text(json.dumps(cls.settings))
         cls.config.chmod(0o600)
         cls.env = {**os.environ, 'CONTEXT_SQL_CONFIG': str(cls.config)}
-        cls.project = str(Path(cls.temp.name) / 'project')
+        cls.project = 'tests/runtime'
+        cls.local_path = str(Path(cls.temp.name) / 'project')
 
     @classmethod
     def tearDownClass(cls):
@@ -55,9 +57,10 @@ class RuntimeTests(unittest.TestCase):
         self.assertNotIn('Traceback', result.stderr)
         return result
 
-    def start(self, task, project=None):
+    def start(self, task, project=None, local_path=None):
+        extra = [] if local_path is None else ['--local-path', local_path]
         return self.invoke('start', '--project', project or self.project,
-                           '--task', task, '--description', 'runtime acceptance')['rows'][0]['run_id']
+                           '--task', task, '--description', 'runtime acceptance', *extra)['rows'][0]['run_id']
 
     def test_task_identity_and_sql_parameters(self):
         task = "runtime'; DELETE FROM catalog.skill; --"
@@ -68,6 +71,70 @@ class RuntimeTests(unittest.TestCase):
         self.assertIn(run, [r['run_id'] for r in rows])
         self.invoke('search', '--query', "'; SET statement_timeout=0; SELECT pg_sleep(20); --")
         self.assertGreater(len(self.invoke('catalog')['rows']), 0)
+
+    def test_project_identity_survives_checkout_move(self):
+        first_path = self.local_path + '-first'
+        second_path = self.local_path + '-second'
+        run = self.start('portable-checkout', local_path=first_path)
+        self.invoke('note', '--run', run, '--kind', 'decision', '--body', 'Keep this decision')
+        self.assertEqual(run, self.start('portable-checkout', local_path=second_path))
+        self.assertEqual(run, self.start('portable-checkout'))
+        row = next(row for row in self.invoke('runs', '--project', self.project)['rows']
+                   if row['run_id'] == run)
+        self.assertEqual(row['project_id'], self.project)
+        self.assertEqual(row['local_path'], second_path)
+        self.assertEqual(self.invoke('restore', '--run', run)['rows'][0]['body'], 'Keep this decision')
+        other = self.start('portable-checkout', project='tests/different', local_path=second_path)
+        self.assertNotEqual(run, other)
+        self.assertIsNone(self.owner.execute('SELECT project_key FROM working.run WHERE run_id=%s',
+                                            (run,)).fetchone()[0])
+
+    def legacy_run(self, task, owner='runtime_writer'):
+        run = str(uuid.uuid4())
+        path = self.local_path + '-' + task
+        self.owner.execute(
+            'INSERT INTO working.run (run_id,owner_name,task,project_key,task_key,local_path) '
+            'VALUES (%s,%s,%s,%s,%s,%s)', (run, owner, task, path, task, path))
+        return run, path
+
+    def test_legacy_adoption_preserves_notes_and_citations(self):
+        run, path = self.legacy_run('legacy-adoption')
+        source = self.owner.execute('SELECT skill_slug,version_id,path,ordinal FROM catalog.section '
+                                    'ORDER BY skill_slug,version_id,path,ordinal LIMIT 1').fetchone()
+        self.invoke('note', '--run', run, '--kind', 'decision', '--body', 'Historical evidence',
+                    '--source-skill', source[0], '--source-version', source[1],
+                    '--source-path', source[2], '--source-section', source[3])
+        before = self.invoke('restore', '--run', run)['rows']
+        self.assertIn(run, [row['run_id'] for row in self.invoke('runs', '--legacy')['rows']])
+        adopted = self.invoke('adopt', '--run', run, '--project', 'tests/adopted')['rows'][0]
+        self.assertEqual(adopted['run_id'], run)
+        self.assertEqual(adopted['local_path'], path)
+        self.assertEqual(run, self.start('legacy-adoption', project='tests/adopted'))
+        self.assertEqual(before, self.invoke('restore', '--run', run)['rows'])
+        self.assertNotIn(run, [row['run_id'] for row in self.invoke('runs', '--legacy')['rows']])
+        self.invoke('adopt', '--run', run, '--project', 'tests/changed', success=False)
+
+    def test_legacy_adoption_conflicts_and_visibility(self):
+        existing = self.start('legacy-conflict', project='tests/conflict')
+        run, path = self.legacy_run('legacy-conflict')
+        self.invoke('note', '--run', run, '--kind', 'todo', '--body', 'Do not lose me')
+        self.invoke('adopt', '--run', run, '--project', 'tests/conflict', success=False)
+        row = self.owner.execute('SELECT project_id,local_path FROM working.run WHERE run_id=%s',
+                                 (run,)).fetchone()
+        self.assertEqual(row, (None, path))
+        self.assertEqual(existing, self.start('legacy-conflict', project='tests/conflict'))
+        self.assertEqual(self.invoke('restore', '--run', run)['rows'][0]['body'], 'Do not lose me')
+        other, _ = self.legacy_run('legacy-other-owner', owner='runtime_other')
+        self.invoke('adopt', '--run', other, '--project', 'tests/adopt-other', success=False)
+        self.assertNotIn(other, [row['run_id'] for row in self.invoke('runs', '--legacy')['rows']])
+        expired, _ = self.legacy_run('legacy-expired')
+        self.owner.execute("UPDATE working.run SET created_at=now()-interval '9 days', "
+                           "expires_at=now()-interval '1 day' WHERE run_id=%s", (expired,))
+        self.invoke('adopt', '--run', expired, '--project', 'tests/adopt-expired', success=False)
+        self.invoke('adopt', '--run', str(uuid.uuid4()), '--project', 'tests/absent', success=False)
+        adopted = self.invoke('adopt', '--run', run, '--project', 'tests/conflict-resolved',
+                              '--local-path', self.local_path)['rows'][0]
+        self.assertEqual(adopted['local_path'], self.local_path)
 
     def test_note_restore_citation_and_state(self):
         run = self.start('citations')
@@ -190,7 +257,7 @@ class RuntimeTests(unittest.TestCase):
         self.invoke('start', '--project', self.project, '--task', task,
                     '--description', '界' * 1000, '--max-bytes', '1024', success=False)
         count = self.owner.execute(
-            'SELECT count(*) FROM working.run WHERE owner_name=%s AND project_key=%s AND task_key=%s',
+            'SELECT count(*) FROM working.run WHERE owner_name=%s AND project_id=%s AND task_key=%s',
             ('runtime_writer', self.project, task)).fetchone()[0]
         self.assertEqual(count, 0)
         run = self.start(task)
