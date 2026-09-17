@@ -7,6 +7,16 @@ description: Import verified upstream Context Skill files into local PostgreSQL 
 
 Use the `context-skills` launcher beside this file. Resolve its location from this skill's directory or the supporting-files directory reported by `npx skills use`. It runs a pinned importer package through `uv`. The host needs Python 3.11 or newer, `uv`, Git, Node.js, and `npx`. Database writes require an existing local instance managed by `package-context-sql-blue`.
 
+For a persistent project installation:
+
+```sh
+npx skills add getcolors/context-sql --skill ingest-context-skills --agent codex --copy --yes
+cp .agents/skills/ingest-context-skills/context-skills ./context-skills
+chmod +x ./context-skills
+```
+
+After `npx skills update -p`, repeat the copy and chmod commands to refresh the project launcher. The installed skill and project launcher are separate copies.
+
 Run in the directory that should own the shared `context-skills.lock.json`. Invoke the launcher by its absolute path, or copy it there before using these examples:
 
 ```sh
@@ -25,7 +35,7 @@ When the lockfile includes other repositories, ingestion reproduces their record
 
 Successful ingestion stores complete files, searchable projections, and acquisition provenance in PostgreSQL, then publishes the lockfile. Prior versions and task notes remain available. Temporary downloads are removed and are not needed for retrieval. `--dry-run` acquires and verifies the payload and previews the result without changing the database or lockfile.
 
-Share the lockfile through the project's usual version control. On another initialized machine:
+Share the lockfile through the project's usual version control. On another initialized machine, install and copy the launcher, bring the shared lockfile into the working directory, then run:
 
 ```sh
 ./context-skills sync --locked

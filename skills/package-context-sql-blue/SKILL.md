@@ -7,7 +7,15 @@ description: Create and initialize local PostgreSQL for SQL-managed agent contex
 
 Use the `blue` launcher beside this file to initialize a dedicated PostgreSQL instance under the current user's home. Run as the normal user with PostgreSQL 16 or newer binaries, Python 3.11 or newer, `uv`, and Git on `PATH`. The skill includes `devenv.nix`, `devenv.lock`, and `.envrc` for hosts using Nix, devenv, and direnv. Copy these files into the deployment directory and run `direnv allow` to supply PostgreSQL and the other runtime tools. Installing this Package Skill also requires Node.js and `npx`.
 
-Copy the launcher into the chosen deployment directory and create `colors.yml` there. Resolve the source `blue` path relative to this skill directory, not the shell's working directory.
+For a persistent installation, run in the chosen deployment directory:
+
+```sh
+npx skills add getcolors/context-sql --skill package-context-sql-blue --agent codex --copy --yes
+cp .agents/skills/package-context-sql-blue/blue ./blue
+chmod +x ./blue
+```
+
+When loaded through `npx skills use`, resolve the source launcher from the supporting-files directory it reports. Copy it to the deployment directory and make it executable. Create `colors.yml` beside the copied launcher:
 
 ```yaml
 profile: context-sql-local
@@ -45,4 +53,4 @@ The package has no `delete` command. `backup` creates a PostgreSQL custom-format
 
 After creation, use the installed `$sql-context` skill to query the catalog and save task notes. Its installation records the configured connection-file path, so custom paths work without extra setup. `CONTEXT_SQL_CONFIG` can override that path. Use stable project IDs such as `getcolors/rabbitmq`; store the local checkout path separately.
 
-For updates, install this Package Skill from a reviewed full upstream commit, then copy its `blue` launcher into the deployment directory again. The root launcher is a separate copy, so updating the installed skill alone does not update the deployment.
+For updates, run `npx skills update -p`, then repeat the copy and chmod commands. To install a reviewed revision instead, use `https://github.com/getcolors/context-sql/tree/<full-commit-sha>` as the installation source. The root launcher is a separate copy, so updating the installed skill alone does not update the deployment.

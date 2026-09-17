@@ -33,16 +33,19 @@ The original files remain authoritative in `getcolors/skills`. This repository's
 
 The Blue Package Skill creates local PostgreSQL, loads the verified catalog, and installs the `sql-context` agent skill. Run it as your normal user with PostgreSQL 16 or newer binaries, Python 3.11 or newer, `uv`, and Git on `PATH`. The Package Skill includes an optional [devenv.nix](devenv.nix) toolchain. Skill acquisition also needs Node.js and `npx`.
 
-Create a deployment directory, then install from a reviewed full commit of this repository. Replace `<published-commit>` with that commit's 40-character SHA:
+Create a deployment directory and install both launcher-bearing skills. No source checkout is required:
 
 ```sh
 mkdir context-sql-local
 cd context-sql-local
-npx --yes skills@1.6.0 add \
-  'https://github.com/getcolors/context-sql/tree/<published-commit>' \
-  --skill package-context-sql-blue --agent codex --copy --yes
-cp .agents/skills/package-context-sql-blue/blue blue
+npx skills add getcolors/context-sql \
+  --skill package-context-sql-blue ingest-context-skills --agent codex --copy --yes
+cp .agents/skills/package-context-sql-blue/blue ./blue
+cp .agents/skills/ingest-context-skills/context-skills ./context-skills
+chmod +x ./blue ./context-skills
 ```
+
+Each launcher fetches its implementation at an embedded full Git commit through `uv`. The shorthand above installs the current skill payload. To select a reviewed payload revision, replace `getcolors/context-sql` with `https://github.com/getcolors/context-sql/tree/<published-commit>`, using its full 40-character SHA.
 
 If the host uses Nix, devenv, and direnv, copy the supplied toolchain files to install PostgreSQL and the other runtime tools into the development environment:
 
@@ -77,7 +80,7 @@ Set `context-sql-service: true` to enable a systemd user service on Linux. The d
 
 A new machine gets the catalog with empty task memory. Portable project IDs do not transfer notes between databases. To preserve task history, take a backup on the old machine and restore it separately.
 
-Open a new Codex session after installation and invoke `$sql-context`. The [Package Skill](skills/package-context-sql-blue/SKILL.md) manages the local database; the [agent skill](skills/sql-context/SKILL.md) queries its catalog and maintains task notes. The installed agent skill records the configured connection-file path, including custom paths. `CONTEXT_SQL_CONFIG` overrides it when needed. When updating the Package Skill, copy its `blue` launcher to the deployment root again after installation.
+Open a new Codex session after installation and invoke `$sql-context`. The [Package Skill](skills/package-context-sql-blue/SKILL.md) manages the local database; the [agent skill](skills/sql-context/SKILL.md) queries its catalog and maintains task notes. The installed agent skill records the configured connection-file path, including custom paths. `CONTEXT_SQL_CONFIG` overrides it when needed. See the launcher refresh commands below when updating either skill.
 
 The repository's root [colors.yml](colors.yml) supplies the same defaults for running `./blue` from a source checkout. Use `CONTEXT_SQL_LIB_ROOT="$PWD" ./blue ...` to test uncommitted package changes. After pushing a package commit, `python3 scripts/pin.py` stamps the launcher with its published SHA. Commit and push the updated launcher separately.
 
@@ -85,7 +88,15 @@ The repository's root [colors.yml](colors.yml) supplies the same defaults for ru
 
 Use the `ingest-context-skills` Agent Skill to add verified payloads to an initialized database. Its `context-skills` helper accepts GitHub repository URLs or `owner/repo`, a branch, tag, or commit, and explicit skill names. It resolves the source reference once, then downloads through `npx skills` at that exact commit. It resolves the current CLI release once per command and records the version it invokes. Use `--skills-cli-version 1.6.0` when you need a particular CLI; matching source bytes and projections remain mandatory.
 
-From this checkout:
+If PostgreSQL is already initialized, install just the ingestion skill in the project that will own the lockfile:
+
+```sh
+npx skills add getcolors/context-sql --skill ingest-context-skills --agent codex --copy --yes
+cp .agents/skills/ingest-context-skills/context-skills ./context-skills
+chmod +x ./context-skills
+```
+
+Run the copied launcher from that project, or use the root launcher from this checkout:
 
 ```sh
 ./context-skills ingest getcolors/skills --skill redis-single-node --dry-run
@@ -97,7 +108,7 @@ Named selections merge with earlier selections for the same repository in the lo
 
 The helper writes `context-skills.lock.json`. Commit this file to share the selected catalog content. It records repository references, full commits, selected skill directories and version IDs, every file path/mode/hash, the parser version, and a digest of the derived records. The acquisition CLI version is informational. Timestamps, credentials, task notes, and local paths are not in the lock. The supplied lock covers the original fourteen-skill corpus, including the generic OCI procedure.
 
-On another machine initialized by `package-context-sql-blue`:
+On another machine, initialize PostgreSQL with `package-context-sql-blue`, install and copy the ingestion launcher as above, and copy or check out the shared `context-skills.lock.json` into the working directory. Installing the skill does not install a project lockfile. Then run:
 
 ```sh
 ./context-skills sync --locked
@@ -114,7 +125,7 @@ To advance the requested references deliberately:
 
 Review the lockfile diff. Update reevaluates `--all` selections; pinned commit requests stay pinned. Names already owned by another repository are rejected rather than silently reassigned. A lockfile does not archive upstream files, so the source must remain available.
 
-All ingestion commands accept `--lockfile PATH`, `--state-dir PATH`, and `--config PATH`. The state directory identifies the managed administrative connection; application reader/writer credentials remain unchanged. Dry runs verify downloads without database or lockfile writes. Run `python3 scripts/local_db.py init` once when upgrading an older instance to apply migration 006. This helper is separate from the bounded `sql-context` reader and cannot be invoked as arbitrary SQL through it.
+All ingestion commands accept `--lockfile PATH`, `--state-dir PATH`, and `--config PATH`. The state directory identifies the managed administrative connection; application reader/writer credentials remain unchanged. Dry runs verify downloads without database or lockfile writes. Run `./blue create` from the deployment directory when upgrading an older instance to apply migration 006. From a source checkout, `python3 scripts/local_db.py init` does the same migration work. This helper is separate from the bounded `sql-context` reader and cannot be invoked as arbitrary SQL through it.
 
 Every database import commits all acquired sources and its lock snapshot in one transaction. Failed verification or database writes preserve the previous lockfile and catalog pointers. Filesystem publication happens after the database commit. If publication fails, the command exits with code 3 and reports the committed digest; recover the file with:
 
@@ -123,6 +134,21 @@ Every database import commits all acquired sources and its lock snapshot in one 
 ```
 
 Use the same custom instance flags when recovering. Keep only the public lockfile in version control; the adjacent hidden guard and pending files are local coordination and recovery files.
+
+## Refresh installed launchers
+
+Update the installed skill payloads from the deployment directory, then replace the root copies for the skills installed there:
+
+```sh
+npx skills update -p
+cp .agents/skills/package-context-sql-blue/blue ./blue
+cp .agents/skills/ingest-context-skills/context-skills ./context-skills
+chmod +x ./blue ./context-skills
+```
+
+For a project with only the ingestion skill, copy and chmod only `context-skills`. Updating `.agents/skills/` leaves existing root launchers unchanged. Keep the installation's `skills-lock.json` with its skill payloads and root launcher copies in version control. Keep `.colors/`, `.envrc.private`, and the hidden `.context-skills.lock.json.*` coordination files out of Git.
+
+`skills-lock.json` tracks the installed agent skills. `context-skills.lock.json` describes the catalog to reproduce in PostgreSQL. Updating the launchers does not update that catalog lock. Use `./context-skills sync --locked` to reproduce it or `./context-skills update` to advance its requested source references.
 
 ## Use locally from a checkout
 

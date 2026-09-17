@@ -69,3 +69,7 @@ On 2026-09-16, Chromium rendered the page at desktop and mobile widths without J
 The 110 eval cases are imported fixtures, not successful model runs. No comparison against file search or embeddings was performed. The original infrastructure builds were not repeated. Legacy role tests use trust authentication in a disposable cluster; service tests also cover SCRAM authentication. Network transport and production connection pools were not tested.
 
 The local helper accepts fixed parameterized operations. It has no arbitrary-SQL endpoint, query-audit store, per-task call budget, or model-token accounting. Database roles do not isolate the Unix account that owns the cluster. The static page exposes no database connection.
+
+## Install and copy distribution
+
+An independent agent installed both launcher-bearing skills with `npx skills add getcolors/context-sql --skill package-context-sql-blue ingest-context-skills --agent codex --copy --yes` in a temporary directory. CLI version 1.6.0 installed both payloads and wrote `skills-lock.json`. The copied launchers passed their help commands without `CONTEXT_SQL_LIB_ROOT`. The package rendered a build plan and completed a create dry-run without creating database state, credentials, or a persistent agent skill. `npx skills update -p` refreshed both project skills. The scratch directory was removed. Both revised skill definitions passed the skill validator.
